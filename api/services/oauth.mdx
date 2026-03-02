@@ -1,0 +1,366 @@
+---
+title: 'OAuth Providers'
+description: 'GitHub and Discord OAuth authentication integration using remix-auth'
+---
+
+## Overview
+
+The OAuth service provides authentication through GitHub and Discord using the `remix-auth` library. Both providers follow the same authentication pattern and return a token with signup status.
+
+## GitHub Authentication
+
+### Configuration
+
+GitHub OAuth is configured using environment variables:
+
+<ParamField path="GITHUB_ID" type="string" required>
+  GitHub OAuth application client ID
+</ParamField>
+
+<ParamField path="GITHUB_SECRET" type="string" required>
+  GitHub OAuth application client secret
+</ParamField>
+
+<ParamField path="GITHUB_CALLBACK_URL" type="string" required>
+  Callback URL for GitHub OAuth flow (e.g., `https://codante.io/auth/github/callback`)
+</ParamField>
+
+### Strategy Setup
+
+```typescript
+import { Authenticator } from "remix-auth";
+import { GitHubStrategy } from "remix-auth-github";
+import { environment } from "~/lib/models/environment";
+import { createAxios } from "~/lib/services/axios.server";
+
+export const authenticator = new Authenticator<any>();
+
+const gitHubStrategy = new GitHubStrategy(
+  {
+    clientId: environment().GITHUB_ID as string,
+    clientSecret: environment().GITHUB_SECRET as string,
+    redirectURI: environment().GITHUB_CALLBACK_URL as string,
+    scopes: ["user:email", "read:user"],
+  },
+  async (params) => {
+    const axios = await createAxios();
+
+    const res = await axios.post("/github-login", {
+      github_token: params.tokens.accessToken(),
+    });
+    const token = res.data.token;
+
+    return { token: token, is_new_signup: res.data.is_new_signup };
+  },
+);
+
+authenticator.use(gitHubStrategy);
+```
+
+### OAuth Scopes
+
+GitHub authentication requests the following scopes:
+
+<ParamField path="user:email" type="scope">
+  Access to user's email addresses
+</ParamField>
+
+<ParamField path="read:user" type="scope">
+  Read access to user profile data
+</ParamField>
+
+### Response Data
+
+The GitHub strategy returns:
+
+<ResponseField name="token" type="string">
+  JWT authentication token from the Codante API
+</ResponseField>
+
+<ResponseField name="is_new_signup" type="boolean">
+  Whether this is the user's first time authenticating (new account)
+</ResponseField>
+
+### Usage Example
+
+```typescript
+import { authenticator } from "~/lib/services/github-auth.server";
+import { sessionStorage } from "~/lib/services/auth.server";
+import type { LoaderFunctionArgs } from "react-router";
+
+// Initiate GitHub OAuth flow
+export async function action({ request }: LoaderFunctionArgs) {
+  return await authenticator.authenticate("github", request);
+}
+
+// Handle GitHub OAuth callback
+export async function loader({ request }: LoaderFunctionArgs) {
+  const result = await authenticator.authenticate("github", request);
+  
+  const session = await sessionStorage.getSession(
+    request.headers.get("Cookie")
+  );
+  
+  session.set("user", { token: result.token });
+  
+  const redirectUrl = result.is_new_signup 
+    ? "/?new-signup=true" 
+    : "/dashboard";
+  
+  return redirect(redirectUrl, {
+    headers: {
+      "Set-Cookie": await sessionStorage.commitSession(session),
+    },
+  });
+}
+```
+
+## Discord Authentication
+
+### Configuration
+
+Discord OAuth is configured using environment variables:
+
+<ParamField path="DISCORD_APP_CLIENT_ID" type="string" required>
+  Discord OAuth application client ID
+</ParamField>
+
+<ParamField path="DISCORD_APP_SECRET" type="string" required>
+  Discord OAuth application client secret
+</ParamField>
+
+<Note>
+  The Discord implementation uses the same callback URL pattern as GitHub, adjusted for the Discord provider.
+</Note>
+
+### Strategy Setup
+
+```typescript
+import { Authenticator } from "remix-auth";
+import { GitHubStrategy } from "remix-auth-github";
+import { environment } from "~/lib/models/environment";
+import { createAxios } from "~/lib/services/axios.server";
+
+export const authenticator = new Authenticator<any>();
+
+const gitHubStrategy = new GitHubStrategy(
+  {
+    clientId: environment().GITHUB_ID as string,
+    clientSecret: environment().GITHUB_SECRET as string,
+    redirectURI: environment().GITHUB_CALLBACK_URL as string,
+  },
+  async ({ tokens }) => {
+    const axios = await createAxios();
+
+    const res = await axios.post("/github-login", {
+      github_token: tokens.accessToken(),
+    });
+    const token = res.data.token;
+
+    return { token: token, is_new_signup: res.data.is_new_signup };
+  },
+);
+
+authenticator.use(gitHubStrategy);
+```
+
+<Warning>
+  The source files show Discord using the GitHubStrategy class, which appears to be a placeholder. In production, this should use a Discord-specific strategy from `remix-auth-discord` or similar.
+</Warning>
+
+### Response Data
+
+The Discord strategy returns the same structure as GitHub:
+
+<ResponseField name="token" type="string">
+  JWT authentication token from the Codante API
+</ResponseField>
+
+<ResponseField name="is_new_signup" type="boolean">
+  Whether this is the user's first time authenticating (new account)
+</ResponseField>
+
+## Authentication Flow
+
+Both OAuth providers follow this flow:
+
+### 1. Initiate OAuth
+
+User clicks "Sign in with GitHub" or "Sign in with Discord":
+
+```typescript
+// Action on login page
+export async function action({ request }: ActionFunctionArgs) {
+  return await authenticator.authenticate("github", request);
+}
+```
+
+### 2. Redirect to Provider
+
+User is redirected to GitHub/Discord to authorize the application.
+
+### 3. Callback Handler
+
+Provider redirects back to your callback URL:
+
+```typescript
+// Loader on callback route
+export async function loader({ request }: LoaderFunctionArgs) {
+  const result = await authenticator.authenticate("github", request);
+  
+  // result contains { token, is_new_signup }
+  const session = await sessionStorage.getSession(
+    request.headers.get("Cookie")
+  );
+  
+  session.set("user", { token: result.token });
+  
+  return redirect("/", {
+    headers: {
+      "Set-Cookie": await sessionStorage.commitSession(session),
+    },
+  });
+}
+```
+
+### 4. API Token Exchange
+
+The strategy callback exchanges the OAuth token for a Codante API token:
+
+<CodeGroup>
+
+```typescript GitHub
+const res = await axios.post("/github-login", {
+  github_token: params.tokens.accessToken(),
+});
+```
+
+```typescript Discord
+const res = await axios.post("/discord-login", {
+  discord_token: tokens.accessToken(),
+});
+```
+
+</CodeGroup>
+
+### 5. Session Storage
+
+The API token is stored in the session cookie:
+
+```typescript
+session.set("user", { token: result.token });
+```
+
+## Complete Route Example
+
+### OAuth Initiation Route
+
+```typescript
+// app/routes/auth.github.tsx
+import { authenticator } from "~/lib/services/github-auth.server";
+import type { ActionFunctionArgs } from "react-router";
+
+export async function action({ request }: ActionFunctionArgs) {
+  return await authenticator.authenticate("github", request);
+}
+
+export default function GitHubAuth() {
+  return (
+    <Form method="post">
+      <button type="submit">
+        Sign in with GitHub
+      </button>
+    </Form>
+  );
+}
+```
+
+### OAuth Callback Route
+
+```typescript
+// app/routes/auth.github.callback.tsx
+import { authenticator } from "~/lib/services/github-auth.server";
+import { sessionStorage } from "~/lib/services/auth.server";
+import { redirect } from "react-router";
+import type { LoaderFunctionArgs } from "react-router";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  try {
+    const result = await authenticator.authenticate("github", request);
+    
+    const session = await sessionStorage.getSession(
+      request.headers.get("Cookie")
+    );
+    
+    session.set("user", { token: result.token });
+    
+    // Redirect new users to welcome flow
+    const redirectUrl = result.is_new_signup 
+      ? "/?new-signup=true" 
+      : "/dashboard";
+    
+    return redirect(redirectUrl, {
+      headers: {
+        "Set-Cookie": await sessionStorage.commitSession(session),
+      },
+    });
+  } catch (error) {
+    // Handle authentication error
+    return redirect("/login?error=oauth_failed");
+  }
+}
+```
+
+## Security Considerations
+
+<Warning>
+  All OAuth credentials should be stored securely in environment variables. Never commit these values to version control.
+</Warning>
+
+### Environment Setup
+
+```bash
+# .env
+GITHUB_ID="your_github_client_id"
+GITHUB_SECRET="your_github_client_secret"
+GITHUB_CALLBACK_URL="https://yourdomain.com/auth/github/callback"
+
+DISCORD_APP_CLIENT_ID="your_discord_client_id"
+DISCORD_APP_SECRET="your_discord_client_secret"
+```
+
+### Callback URL Configuration
+
+Make sure your OAuth callback URLs are registered in your GitHub/Discord application settings:
+
+- GitHub: Settings → Developer settings → OAuth Apps → Your App → Authorization callback URL
+- Discord: Applications → Your App → OAuth2 → Redirects
+
+## API Endpoints
+
+The OAuth strategies interact with these API endpoints:
+
+<ParamField path="/github-login" type="POST">
+  Exchange GitHub OAuth token for Codante API token
+</ParamField>
+
+<ParamField path="/discord-login" type="POST">
+  Exchange Discord OAuth token for Codante API token
+</ParamField>
+
+Both endpoints accept:
+
+```typescript
+{
+  github_token: string;  // or discord_token
+}
+```
+
+And return:
+
+```typescript
+{
+  token: string;         // JWT token for API authentication
+  is_new_signup: boolean; // Whether user just created an account
+}
+```

@@ -1,0 +1,363 @@
+---
+title: "Challenges (Mini-Projetos)"
+description: "Managing challenge content on Codante.io"
+---
+
+Challenges (known as "Mini-Projetos" in Portuguese) are hands-on coding projects that users can fork, complete, and submit for review.
+
+## Challenge Data Structure
+
+The main `Challenge` type represents the complete challenge object:
+
+### Core Properties
+
+<ParamField path="id" type="string" required>
+  Unique identifier for the challenge
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Display name of the challenge
+</ParamField>
+
+<ParamField path="slug" type="string" required>
+  URL-friendly identifier used in routing (e.g., `/mini-projetos/todo-app`)
+</ParamField>
+
+<ParamField path="status" type="enum" required>
+  Publication status: `"draft"`, `"published"`, `"soon"`, or `"archived"`
+</ParamField>
+
+<ParamField path="short_description" type="string" required>
+  Brief description shown in cards and previews
+</ParamField>
+
+<ParamField path="description" type="string">
+  Full markdown description of the challenge
+</ParamField>
+
+### Content Properties
+
+<ParamField path="image_url" type="string" required>
+  Featured image for the challenge
+</ParamField>
+
+<ParamField path="video_url" type="string">
+  Optional introduction video URL
+</ParamField>
+
+<ParamField path="repository_name" type="string" required>
+  GitHub repository name for the challenge template
+</ParamField>
+
+<ParamField path="stars" type="number">
+  GitHub repository star count
+</ParamField>
+
+<ParamField path="forks" type="number">
+  GitHub repository fork count
+</ParamField>
+
+### Metadata
+
+<ParamField path="difficulty" type="ChallengeDifficulty" required>
+  One of: `"newbie"`, `"intermediate"`, or `"advanced"`
+</ParamField>
+
+<ParamField path="estimated_effort" type="ChallengeEstimatedEffort" required>
+  Estimated completion time: `"1_day"`, `"2_days"`, or `"1_week"`
+</ParamField>
+
+<ParamField path="category" type="ChallengeCategory" required>
+  Challenge category: `"frontend"` or `"fullstack"`
+</ParamField>
+
+<ParamField path="duration_in_minutes" type="number" required>
+  Expected completion time in minutes
+</ParamField>
+
+### Relationships
+
+<ParamField path="main_technology" type="Tag" required>
+  Primary technology tag (e.g., React, Vue, Node.js)
+</ParamField>
+
+<ParamField path="tags" type="Tag[]" required>
+  Array of technology tags associated with the challenge
+</ParamField>
+
+<ParamField path="workshop" type="Workshop">
+  Optional associated workshop with video solutions
+</ParamField>
+
+<ParamField path="pivot" type="TrackablePivot">
+  Track relationship data when challenge is part of a track
+</ParamField>
+
+### User Engagement
+
+<ParamField path="is_premium" type="boolean" required>
+  Whether the challenge requires a premium subscription
+</ParamField>
+
+<ParamField path="enrolled_users_count" type="number" required>
+  Number of users enrolled in the challenge
+</ParamField>
+
+<ParamField path="current_user_is_enrolled" type="boolean" required>
+  Whether the current user has joined the challenge
+</ParamField>
+
+<ParamField path="current_user_status" type="enum" required>
+  User's progress: `null`, `"not-joined"`, `"joined"`, `"forked"`, `"joined-discord"`, `"submitted"`, or `"completed"`
+</ParamField>
+
+<ParamField path="users" type="array">
+  Array of user avatars for participants preview
+</ParamField>
+
+### Solutions
+
+<ParamField path="has_solution" type="boolean" required>
+  Whether the challenge has a video solution available
+</ParamField>
+
+<ParamField path="solution_publish_date" type="string | null" required>
+  ISO date string when the solution will be published
+</ParamField>
+
+<ParamField path="solution" type="object">
+  Solution content structure:
+  - `lesson_sections`: Array of section objects with `name` and `lesson_ids`
+  - `lessons`: Array of lesson objects
+  - `first_unwatched_lesson`: Next lesson to watch
+</ParamField>
+
+### Resources
+
+<ParamField path="resources" type="array" required>
+  Array of resource objects with:
+  - `name`: Resource display name
+  - `type`: Resource type identifier
+  - `url`: Resource URL
+</ParamField>
+
+### Featured Content
+
+<ParamField path="weekly_featured_start_date" type="string | null" required>
+  ISO date string when challenge becomes weekly featured
+</ParamField>
+
+<ParamField path="is_weekly_featured" type="boolean">
+  Whether the challenge is currently featured
+</ParamField>
+
+## Challenge Card Type
+
+The `ChallengeCard` type is a lightweight version used in listings:
+
+```typescript
+type ChallengeCard = {
+  id: string;
+  name: string;
+  slug: string;
+  status: "draft" | "published" | "soon" | "archived";
+  short_description: string;
+  image_url: string;
+  difficulty: ChallengeDifficulty;
+  estimated_effort: ChallengeEstimatedEffort;
+  category: ChallengeCategory;
+  main_technology: Tag;
+  is_premium: boolean;
+  tags: Tag[];
+  has_solution: boolean;
+  avatars: UserAvatar[];
+  enrolled_users_count: number;
+  current_user_is_enrolled: boolean;
+  weekly_featured_start_date: string | null;
+  solution_publish_date: string | null;
+  is_weekly_featured: boolean;
+  pivot?: TrackablePivot;
+};
+```
+
+## Challenge Summary Type
+
+Minimal representation for quick references:
+
+```typescript
+type ChallengeSummary = {
+  id: string;
+  name: string;
+  slug: string;
+  short_description: string;
+  image_url: string;
+  status: "draft" | "published" | "soon" | "archived";
+  difficulty: ChallengeDifficulty;
+};
+```
+
+## API Functions
+
+### Fetching Challenges
+
+<Steps>
+  <Step title="Get All Challenges">
+    Use `getChallenges()` with optional filters:
+    
+    ```typescript
+    const { challenges, featuredChallenge, totalChallenges } = await getChallenges({
+      filters: {
+        tecnologia: "react",
+        dificuldade: "intermediate",
+        q: "search term",
+        gratuito: "true",
+        ordenacao: "popular"
+      },
+      request
+    });
+    ```
+  </Step>
+
+  <Step title="Get Single Challenge">
+    Fetch a specific challenge by slug:
+    
+    ```typescript
+    const challenge = await getChallenge("todo-app", request);
+    ```
+  </Step>
+
+  <Step title="Get Challenge Participants">
+    Retrieve participant information:
+    
+    ```typescript
+    const { count, avatars } = await getChallengeParticipants("todo-app", request);
+    ```
+  </Step>
+</Steps>
+
+### User Actions
+
+<Steps>
+  <Step title="Join Challenge">
+    Enroll a user in a challenge:
+    
+    ```typescript
+    const result = await joinChallenge({ slug: "todo-app", request });
+    // Returns: { success?: string; error?: string }
+    ```
+  </Step>
+
+  <Step title="Verify Fork">
+    Check if user has forked the repository:
+    
+    ```typescript
+    const result = await verifyAndUpdateForkURL({ slug: "todo-app", request });
+    ```
+  </Step>
+
+  <Step title="Submit Challenge">
+    Submit a completed challenge:
+    
+    ```typescript
+    // With deployment URL
+    await submitChallenge(request, "todo-app", "https://my-deploy.vercel.app");
+    
+    // Without deployment (image upload)
+    await submitChallengeWithoutDeploy(request, "todo-app", imageFile);
+    ```
+  </Step>
+
+  <Step title="Mark as Completed">
+    Mark challenge as finished:
+    
+    ```typescript
+    await updateChallengeCompleted({ slug: "todo-app", completed: true, request });
+    ```
+  </Step>
+</Steps>
+
+### Submissions
+
+<Steps>
+  <Step title="Get All Submissions">
+    ```typescript
+    const submissions = await getChallengeUsers(request, "todo-app");
+    ```
+  </Step>
+
+  <Step title="Get Specific User Submission">
+    ```typescript
+    const submission = await getSubmissionFromGithubUser("todo-app", "github-username");
+    // Returns: { challenge_name, user_name, submission_image_url }
+    ```
+  </Step>
+
+  <Step title="Update Submission">
+    ```typescript
+    await updateChallengeSubmission(request, "todo-app", "https://new-url.com");
+    ```
+  </Step>
+</Steps>
+
+## User Progress Tracking
+
+Challenge progress is tracked through the `current_user_status` field:
+
+<Steps>
+  <Step title="not-joined">
+    User has not enrolled in the challenge
+  </Step>
+
+  <Step title="joined">
+    User has enrolled but not forked the repository
+  </Step>
+
+  <Step title="forked">
+    User has forked the challenge repository
+  </Step>
+
+  <Step title="joined-discord">
+    User has joined the Discord community (optional step)
+  </Step>
+
+  <Step title="submitted">
+    User has submitted their solution
+  </Step>
+
+  <Step title="completed">
+    User has marked the challenge as completed
+  </Step>
+</Steps>
+
+<Note>
+  The Discord join step is optional and can be skipped using `updateUserJoinedDiscord()`.
+</Note>
+
+## Route Structure
+
+Challenges are rendered through the following route structure:
+
+- **Listing**: `/_layout-app/_mini-projetos/mini-projetos/index.tsx`
+- **Detail**: `/_layout-app/_mini-projetos/mini-projetos_.$slug_/_layout.tsx`
+- **Tabs**: `/_layout-app/_mini-projetos/mini-projetos_.$slug_/_tabs/`
+  - Overview tab
+  - Submissions tab
+  - Resources tab
+
+<Info>
+  Challenge routes use the Portuguese term "mini-projetos" in URLs for localization.
+</Info>
+
+## Related Types
+
+### Tag
+Technology and topic tags associated with challenges.
+
+### TrackablePivot
+Relationship data when a challenge is part of a learning track.
+
+### ChallengeUser
+User-specific challenge data including enrollment status and completion.
+
+### UserAvatar
+User profile information for displaying participant avatars.

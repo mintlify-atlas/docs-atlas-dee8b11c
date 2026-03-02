@@ -1,0 +1,282 @@
+---
+title: 'Challenges (Mini-Projetos)'
+description: 'Interactive coding challenges with GitHub integration and community features'
+---
+
+## Overview
+
+Challenges, known as "Mini-Projetos" on Codante.io, are hands-on coding projects that help you practice real-world development skills. Each challenge includes a GitHub repository template, step-by-step progression tracking, and community features.
+
+<CardGroup cols={2}>
+  <Card title="Browse Challenges" icon="code" href="/mini-projetos">
+    Explore available coding challenges
+  </Card>
+  <Card title="Submit Your Solution" icon="rocket" href="#submitting-solutions">
+    Learn how to submit your work
+  </Card>
+</CardGroup>
+
+## Challenge Structure
+
+Each challenge contains the following metadata:
+
+```typescript
+type Challenge = {
+  name: string;
+  slug: string;
+  status: "draft" | "published" | "soon" | "archived";
+  difficulty: "newbie" | "intermediate" | "advanced";
+  estimated_effort: "1_day" | "2_days" | "1_week";
+  category: "frontend" | "fullstack";
+  is_premium: boolean;
+  has_solution: boolean;
+  repository_name: string;
+  description: string;
+  main_technology: Tag;
+  tags: Tag[];
+  resources: Resource[];
+}
+```
+
+### Challenge Properties
+
+<Note>
+Challenges can be **free** or **PRO content**. Premium challenges require an active PRO subscription.
+</Note>
+
+- **Difficulty levels**: `newbie`, `intermediate`, `advanced`
+- **Estimated effort**: `1_day`, `2_days`, `1_week`
+- **Categories**: `frontend`, `fullstack`
+- **GitHub integration**: Each challenge has an associated repository
+- **Video solutions**: Premium challenges include step-by-step video tutorials
+
+## Participation Workflow
+
+When you join a challenge, you progress through these steps:
+
+<Steps>
+  <Step title="Connect GitHub">
+    Link your GitHub account to enable repository access and fork verification.
+    
+    ```typescript
+    current_user_status: "not-joined" | "joined" | "forked" | 
+                        "joined-discord" | "submitted" | "completed"
+    ```
+  </Step>
+  
+  <Step title="Join the Challenge">
+    Register your participation in the challenge. This tracks you as an active participant.
+    
+    ```typescript
+    await joinChallenge({ slug, request });
+    // Returns: { success: "Sua participação no mini projeto foi registrada." }
+    ```
+  </Step>
+  
+  <Step title="Join Discord (Optional)">
+    Connect with the community, ask questions, and collaborate with other developers working on the same challenge.
+  </Step>
+  
+  <Step title="Fork Repository">
+    Fork the challenge repository to your GitHub account. The platform verifies your fork automatically.
+    
+    ```typescript
+    await verifyAndUpdateForkURL({ slug, request });
+    // Checks GitHub API for fork existence
+    ```
+  </Step>
+  
+  <Step title="Build and Submit">
+    Complete the challenge and submit your solution with a deployment URL or screenshot.
+  </Step>
+  
+  <Step title="Mark as Completed">
+    Mark the challenge as finished to track your progress and unlock certificates.
+  </Step>
+</Steps>
+
+## Submitting Solutions
+
+Codeante supports two submission methods:
+
+### With Deployment URL
+
+Submit a live deployment of your project:
+
+```typescript
+await submitChallenge(request, slug, submissionUrl, metadata);
+```
+
+<Info>
+Recommended deployment platforms: Vercel, Netlify, GitHub Pages, or any hosting service.
+</Info>
+
+### Without Deployment (Image Upload)
+
+If you don't have a deployment, upload a screenshot (recommended: 1920x1080px):
+
+```typescript
+await submitChallengeWithoutDeploy(request, slug, submissionImage);
+```
+
+<Note>
+You can use tools like [Screenshot.rocks](https://screenshot.rocks) to create professional screenshots.
+</Note>
+
+## Updating Submissions
+
+Update your submission after initial submission:
+
+```typescript
+await updateChallengeSubmission(request, slug, submissionUrl, metadata);
+// Returns: { success: "Submissão atualizada com sucesso." }
+```
+
+## Challenge Features
+
+### GitHub Integration
+
+- **Repository Templates**: Each challenge provides a starter repository
+- **Fork Verification**: Automatic detection of repository forks
+- **GitHub Stats**: Display stars and forks count
+- **Fork URL Tracking**: Links to your forked repository
+
+### Community Engagement
+
+```typescript
+type ChallengeUser = {
+  user: User;
+  challenge: ChallengeSummary;
+  submission_url: string;
+  submission_image_url: string;
+  reactions: Reactions;
+  comments: Comment[];
+  joined_discord: boolean;
+  completed: boolean;
+  submitted_at: string | null;
+}
+```
+
+- **Participant Gallery**: View submissions from other developers
+- **Reactions**: Like and react to submissions
+- **Comments**: Discuss solutions and provide feedback
+- **Discord Community**: Join challenge-specific discussions
+
+### Progress Tracking
+
+<CardGroup cols={3}>
+  <Card title="Enrolled Users" icon="users">
+    See how many developers are working on each challenge
+  </Card>
+  <Card title="Completion Status" icon="check-circle">
+    Track your progress through challenge steps
+  </Card>
+  <Card title="Certificates" icon="certificate">
+    Earn certificates upon completion
+  </Card>
+</CardGroup>
+
+## Weekly Featured Challenges
+
+Codeante highlights featured challenges weekly:
+
+```typescript
+weekly_featured_start_date: string | null;
+is_weekly_featured: boolean;
+```
+
+<Info>
+Featured challenges appear on the homepage and receive increased visibility in the community.
+</Info>
+
+## Video Solutions
+
+Premium challenges include comprehensive video solutions:
+
+```typescript
+solution: {
+  lesson_sections: {
+    name: string;
+    lesson_ids: number[];
+  }[];
+  lessons: SidebarLesson[];
+  first_unwatched_lesson: SidebarLesson;
+}
+```
+
+- **Structured Learning**: Solutions organized into sections
+- **Progress Tracking**: Resume from where you left off
+- **Step-by-Step Walkthrough**: Detailed explanations of implementation
+
+## Filtering and Discovery
+
+Find challenges using these filters:
+
+```typescript
+filters: {
+  tecnologia?: string;      // Technology/framework
+  dificuldade?: string;     // Difficulty level
+  q?: string;              // Search query
+  gratuito?: string;       // Free/premium filter
+  ordenacao?: string;      // Sorting order
+}
+```
+
+## Related Content
+
+Challenges can be linked to workshops:
+
+```typescript
+workshop?: Workshop;  // Associated tutorial workshop
+```
+
+<Info>
+Some challenges include companion workshops that teach the concepts needed to complete the challenge.
+</Info>
+
+## API Reference
+
+### Get All Challenges
+
+```typescript
+await getChallenges({ filters, request });
+// Returns: { challenges, featuredChallenge, totalChallenges }
+```
+
+### Get Single Challenge
+
+```typescript
+await getChallenge(slug, request);
+// Returns: Challenge object with full details
+```
+
+### Get Challenge Participants
+
+```typescript
+await getChallengeParticipants(slug, request);
+// Returns: { count, avatars }
+```
+
+### Get Submissions
+
+```typescript
+await getChallengeUsers(request, slug);
+// Returns: Array of ChallengeUser with submissions
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Version Control" icon="git-alt">
+    Commit your code regularly and use descriptive commit messages
+  </Card>
+  <Card title="Documentation" icon="book">
+    Include a README.md explaining your implementation approach
+  </Card>
+  <Card title="Code Quality" icon="code-check">
+    Follow best practices and write clean, maintainable code
+  </Card>
+  <Card title="Community" icon="comments">
+    Engage with other submissions and provide constructive feedback
+  </Card>
+</CardGroup>

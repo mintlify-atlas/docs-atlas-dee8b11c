@@ -1,0 +1,502 @@
+---
+title: 'Authentication Service'
+description: 'Server-side authentication with session management, user registration, login, logout, and password reset'
+---
+
+## Overview
+
+The authentication service provides server-side session management using cookie-based storage. It handles user registration, login, logout, password reset, and authentication guards for protected routes.
+
+## Session Configuration
+
+### sessionStorage
+
+Cookie-based session storage with secure defaults.
+
+```typescript
+export const sessionStorage = createCookieSessionStorage({
+  cookie: {
+    name: "codante_session",
+    secure: environment().NODE_ENV === "production",
+    secrets: [environment().SESSION_SECRET as string],
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+    httpOnly: true,
+  },
+});
+```
+
+<ParamField path="cookie.name" type="string" default="codante_session">
+  Session cookie name
+</ParamField>
+
+<ParamField path="cookie.maxAge" type="number" default="2592000">
+  Cookie expiration in seconds (30 days)
+</ParamField>
+
+<ParamField path="cookie.httpOnly" type="boolean" default="true">
+  Prevents client-side JavaScript access to cookies
+</ParamField>
+
+### Session Helpers
+
+Exported session management functions from `sessionStorage`:
+
+- `getSession(cookieHeader: string | null)` - Retrieve session from cookie header
+- `commitSession(session: Session)` - Serialize session to Set-Cookie header
+- `destroySession(session: Session)` - Clear session and return Set-Cookie header
+
+## Authentication Functions
+
+### register()
+
+Register a new user account and automatically log them in.
+
+```typescript
+export async function register({
+  request,
+  name,
+  email,
+  password,
+  passwordConfirmation,
+}: {
+  request: Request;
+  name: string;
+  email: string;
+  password: string;
+  passwordConfirmation: string;
+})
+```
+
+<ParamField path="request" type="Request" required>
+  The incoming HTTP request object
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  User's full name
+</ParamField>
+
+<ParamField path="email" type="string" required>
+  User's email address
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  User's password
+</ParamField>
+
+<ParamField path="passwordConfirmation" type="string" required>
+  Password confirmation (must match password)
+</ParamField>
+
+<ResponseField name="errors" type="string">
+  Error message if registration fails
+</ResponseField>
+
+<ResponseField name="redirector" type="Response">
+  Redirect response with session cookie on success
+</ResponseField>
+
+#### Example
+
+```typescript
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData();
+  
+  const result = await register({
+    request,
+    name: formData.get("name") as string,
+    email: formData.get("email") as string,
+    password: formData.get("password") as string,
+    passwordConfirmation: formData.get("password_confirmation") as string,
+  });
+  
+  if (result.errors) {
+    return json({ errors: result.errors });
+  }
+  
+  return result.redirector;
+}
+```
+
+### login()
+
+Authenticate a user with email and password.
+
+```typescript
+export async function login({
+  request,
+  email,
+  password,
+  redirectTo = "/",
+}: {
+  request: Request;
+  email: string;
+  password: string;
+  redirectTo?: string;
+})
+```
+
+<ParamField path="request" type="Request" required>
+  The incoming HTTP request object
+</ParamField>
+
+<ParamField path="email" type="string" required>
+  User's email address
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  User's password
+</ParamField>
+
+<ParamField path="redirectTo" type="string" default="/">
+  URL to redirect to after successful login
+</ParamField>
+
+<ResponseField name="errors" type="string">
+  Error message if login fails
+</ResponseField>
+
+<ResponseField name="redirector" type="Response">
+  Redirect response with session cookie on success
+</ResponseField>
+
+#### Example
+
+```typescript
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData();
+  
+  const result = await login({
+    request,
+    email: formData.get("email") as string,
+    password: formData.get("password") as string,
+    redirectTo: "/dashboard",
+  });
+  
+  if (result.errors) {
+    return json({ errors: result.errors });
+  }
+  
+  return result.redirector;
+}
+```
+
+### logout()
+
+Log out the current user and destroy their session.
+
+```typescript
+export async function logout({
+  request,
+  redirectTo = "/login",
+}: {
+  request: Request;
+  redirectTo?: string;
+})
+```
+
+<ParamField path="request" type="Request" required>
+  The incoming HTTP request object
+</ParamField>
+
+<ParamField path="redirectTo" type="string" default="/login">
+  URL to redirect to after logout
+</ParamField>
+
+<ResponseField name="response" type="Response">
+  Redirect response with destroyed session cookie
+</ResponseField>
+
+#### Example
+
+```typescript
+export async function action({ request }: ActionFunctionArgs) {
+  return await logout({ request, redirectTo: "/" });
+}
+```
+
+### logoutWithRedirectAfterLogin()
+
+Log out the user and redirect to login page with a return URL.
+
+```typescript
+export async function logoutWithRedirectAfterLogin({
+  request,
+  redirectTo = "/login",
+}: {
+  request: Request;
+  redirectTo?: string;
+})
+```
+
+<ParamField path="request" type="Request" required>
+  The incoming HTTP request object
+</ParamField>
+
+<ParamField path="redirectTo" type="string" default="/login">
+  URL to redirect to after re-authentication
+</ParamField>
+
+<ResponseField name="response" type="Response">
+  Redirect to `/login?redirectTo={redirectTo}` with destroyed session
+</ResponseField>
+
+<Note>
+  This function is useful for session expiration scenarios where you want users to log in again and return to their previous page.
+</Note>
+
+## User Data Functions
+
+### currentToken()
+
+Retrieve the authentication token from the current session.
+
+```typescript
+export async function currentToken({ request }: { request: Request })
+```
+
+<ParamField path="request" type="Request" required>
+  The incoming HTTP request object
+</ParamField>
+
+<ResponseField name="token" type="string | undefined">
+  The user's authentication token if logged in
+</ResponseField>
+
+#### Example
+
+```typescript
+export async function loader({ request }: LoaderFunctionArgs) {
+  const token = await currentToken({ request });
+  
+  if (!token) {
+    return redirect("/login");
+  }
+  
+  return json({ authenticated: true });
+}
+```
+
+### user()
+
+Fetch the current authenticated user's data.
+
+```typescript
+export async function user({
+  request,
+}: {
+  request: Request;
+}): Promise<User | null>
+```
+
+<ParamField path="request" type="Request" required>
+  The incoming HTTP request object
+</ParamField>
+
+<ResponseField name="user" type="User | null">
+  The authenticated user object or `null` if not authenticated
+</ResponseField>
+
+#### Example
+
+```typescript
+export async function loader({ request }: LoaderFunctionArgs) {
+  const currentUser = await user({ request });
+  
+  return json({ user: currentUser });
+}
+```
+
+<Note>
+  Returns `null` if the user is not authenticated or if the API returns a 401 status.
+</Note>
+
+## Authentication Guards
+
+### requireAuth()
+
+Protect routes that require authentication. Throws a redirect to `/login` if user is not authenticated.
+
+```typescript
+export async function requireAuth({ request }: { request: Request })
+```
+
+<ParamField path="request" type="Request" required>
+  The incoming HTTP request object
+</ParamField>
+
+#### Example
+
+```typescript
+export async function loader({ request }: LoaderFunctionArgs) {
+  await requireAuth({ request });
+  
+  // User is authenticated, continue with protected logic
+  const data = await fetchProtectedData();
+  return json({ data });
+}
+```
+
+<Warning>
+  This function throws a redirect response. Make sure to call it at the top of your loader or action before any other logic.
+</Warning>
+
+### requireGuest()
+
+Protect routes that should only be accessible to guests (non-authenticated users). Throws a redirect to `/` if user is authenticated.
+
+```typescript
+export async function requireGuest({ request }: { request: Request })
+```
+
+<ParamField path="request" type="Request" required>
+  The incoming HTTP request object
+</ParamField>
+
+#### Example
+
+```typescript
+export async function loader({ request }: LoaderFunctionArgs) {
+  await requireGuest({ request });
+  
+  // User is not authenticated, show login/register page
+  return json({});
+}
+```
+
+## Password Reset
+
+### sendPasswordLink()
+
+Send a password reset link to the user's email.
+
+```typescript
+export async function sendPasswordLink({ email }: { email: string })
+```
+
+<ParamField path="email" type="string" required>
+  User's email address
+</ParamField>
+
+<ResponseField name="errors" type="string[]">
+  Array of error messages if the request fails
+</ResponseField>
+
+#### Example
+
+```typescript
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData();
+  const email = formData.get("email") as string;
+  
+  const result = await sendPasswordLink({ email });
+  
+  if (result?.errors) {
+    return json({ errors: result.errors });
+  }
+  
+  return json({ success: true });
+}
+```
+
+### resetPassword()
+
+Reset user's password using a reset token.
+
+```typescript
+export async function resetPassword({
+  token,
+  email,
+  password,
+  passwordConfirmation,
+}: {
+  token: string;
+  email: string;
+  password: string;
+  passwordConfirmation: string;
+})
+```
+
+<ParamField path="token" type="string" required>
+  Password reset token from email link
+</ParamField>
+
+<ParamField path="email" type="string" required>
+  User's email address
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  New password
+</ParamField>
+
+<ParamField path="passwordConfirmation" type="string" required>
+  Password confirmation (must match password)
+</ParamField>
+
+<ResponseField name="errors" type="string[]">
+  Array of error messages if reset fails
+</ResponseField>
+
+<ResponseField name="redirector" type="Response">
+  Redirect to `/login` on success
+</ResponseField>
+
+#### Example
+
+```typescript
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData();
+  const url = new URL(request.url);
+  
+  const result = await resetPassword({
+    token: url.searchParams.get("token") as string,
+    email: formData.get("email") as string,
+    password: formData.get("password") as string,
+    passwordConfirmation: formData.get("password_confirmation") as string,
+  });
+  
+  if (result.errors) {
+    return json({ errors: result.errors });
+  }
+  
+  return result.redirector;
+}
+```
+
+## Redirect Cookie
+
+### redirectToCookie
+
+A short-lived cookie for storing redirect URLs during authentication flows.
+
+```typescript
+export const redirectToCookie = createCookie("redirect-to", {
+  path: "/",
+  httpOnly: true,
+  sameSite: "lax",
+  maxAge: 60, // 1 minute
+  secure: environment().NODE_ENV === "production",
+});
+```
+
+<ParamField path="maxAge" type="number" default="60">
+  Cookie expires after 60 seconds
+</ParamField>
+
+#### Example
+
+```typescript
+export async function loader({ request }: LoaderFunctionArgs) {
+  const redirectTo = new URL(request.url).searchParams.get("redirectTo");
+  
+  return json(
+    { showLogin: true },
+    {
+      headers: {
+        "Set-Cookie": await redirectToCookie.serialize(redirectTo),
+      },
+    }
+  );
+}
+```

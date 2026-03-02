@@ -1,0 +1,453 @@
+---
+title: "Tracks (Trilhas)"
+description: "Managing learning track content on Codante.io"
+---
+
+Tracks (known as "Trilhas" in Portuguese) are curated learning paths that combine workshops, challenges, and custom content into structured educational journeys.
+
+## Track Data Structure
+
+The `Track` type represents a complete learning track:
+
+### Core Properties
+
+<ParamField path="id" type="string" required>
+  Unique identifier for the track
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Display name of the track
+</ParamField>
+
+<ParamField path="slug" type="string" required>
+  URL-friendly identifier (e.g., `/trilhas/fullstack-javascript`)
+</ParamField>
+
+<ParamField path="status" type="enum" required>
+  Publication status: `"draft"`, `"published"`, `"soon"`, or `"archived"`
+</ParamField>
+
+<ParamField path="short_description" type="string" required>
+  Brief description shown in track cards
+</ParamField>
+
+<ParamField path="description" type="string" required>
+  Full markdown description of track content and learning objectives
+</ParamField>
+
+<ParamField path="image_url" type="string">
+  Featured image for the track
+</ParamField>
+
+### Metadata
+
+<ParamField path="difficulty" type="number" required>
+  Difficulty level: `1` (beginner), `2` (intermediate), or `3` (advanced)
+</ParamField>
+
+<ParamField path="duration_in_minutes" type="number" required>
+  Estimated total completion time in minutes
+</ParamField>
+
+<ParamField path="created_at" type="string" required>
+  ISO date string of track creation
+</ParamField>
+
+<ParamField path="updated_at" type="string" required>
+  ISO date string of last update
+</ParamField>
+
+### Trackables
+
+<ParamField path="trackables" type="(WorkshopTrackable | ChallengeTrackable)[]" required>
+  Array of content items in the track (workshops and challenges)
+</ParamField>
+
+## Trackable Types
+
+Tracks contain two types of content items:
+
+### Workshop Trackable
+
+Workshops included in the track:
+
+```typescript
+type WorkshopTrackable = {
+  id: number;
+  type: "workshop";
+  name: string;
+  slug: string;
+  video_url: string;
+  instructor: Instructor;
+  lessons: SidebarLesson[];
+  lesson_sections: {
+    name: string;
+    lesson_ids: number[];
+  }[];
+};
+```
+
+<ParamField path="type" type="string" required>
+  Always `"workshop"` for workshop trackables
+</ParamField>
+
+<ParamField path="instructor" type="Instructor" required>
+  Instructor information for the workshop
+</ParamField>
+
+<ParamField path="lessons" type="SidebarLesson[]" required>
+  All lessons in the workshop
+</ParamField>
+
+<ParamField path="lesson_sections" type="array" required>
+  Lesson organization structure
+</ParamField>
+
+### Challenge Trackable
+
+Challenges included in the track:
+
+```typescript
+type ChallengeTrackable = {
+  id: number;
+  type: "challenge";
+  name: string;
+  slug: string;
+  image_url: string;
+  challengeUser: ChallengeUser;
+  track_lessons: SidebarLesson[];
+  solution: {
+    lessons: SidebarLesson[];
+    lesson_sections: {
+      name: string;
+      lesson_ids: number[];
+    }[];
+  };
+};
+```
+
+<ParamField path="type" type="string" required>
+  Always `"challenge"` for challenge trackables
+</ParamField>
+
+<ParamField path="challengeUser" type="ChallengeUser" required>
+  User's challenge enrollment and progress data
+</ParamField>
+
+<ParamField path="track_lessons" type="SidebarLesson[]" required>
+  Introductory lessons specific to the track context
+</ParamField>
+
+<ParamField path="solution" type="object" required>
+  Challenge solution structure with lessons and sections
+</ParamField>
+
+### Type Guard
+
+Distinguish between trackable types:
+
+```typescript
+function isWorkshopTrackable(
+  trackable: WorkshopTrackable | ChallengeTrackable
+): trackable is WorkshopTrackable {
+  return (trackable as WorkshopTrackable).lessons !== undefined;
+}
+
+// Usage
+if (isWorkshopTrackable(item)) {
+  // TypeScript knows this is a WorkshopTrackable
+  console.log(item.instructor.name);
+} else {
+  // TypeScript knows this is a ChallengeTrackable
+  console.log(item.challengeUser.status);
+}
+```
+
+## Track Sections
+
+Tracks can be organized into sections:
+
+```typescript
+type TrackSection = {
+  id: number;
+  track_id: number;
+  name: string;
+  description: string;
+  position: number;
+  instructors: Instructor[];
+  tags: Tag[];
+  trackables: (Challenge | Workshop | TrackItem)[];
+};
+```
+
+<ParamField path="position" type="number" required>
+  Order of the section within the track
+</ParamField>
+
+<ParamField path="instructors" type="Instructor[]" required>
+  Instructors featured in this section
+</ParamField>
+
+<ParamField path="tags" type="Tag[]" required>
+  Technologies and topics covered in this section
+</ParamField>
+
+<ParamField path="trackables" type="array" required>
+  Content items in this section (can include `TrackItem` for custom content)
+</ParamField>
+
+## Track Items
+
+Custom content types within tracks:
+
+```typescript
+type TrackItem = {
+  id: number;
+  type: "external_link" | "markdown";
+  name: string;
+  content: string;
+  track_section_id: number;
+  position: number;
+  status: "draft" | "published" | "soon" | "archived";
+  pivot?: TrackablePivot;
+  completed?: boolean;
+  is_premium?: boolean;
+};
+```
+
+<Steps>
+  <Step title="external_link">
+    Link to external resources:
+    - `name`: Link display text
+    - `content`: External URL
+  </Step>
+
+  <Step title="markdown">
+    Custom markdown content:
+    - `name`: Content title
+    - `content`: Markdown text
+  </Step>
+</Steps>
+
+<Info>
+  `TrackItem` allows tracks to include custom content beyond workshops and challenges, such as reading materials or external resources.
+</Info>
+
+## Trackable Pivot
+
+Relationship data connecting trackables to tracks:
+
+```typescript
+type TrackablePivot = {
+  id: string;
+  trackable_type: string;
+  trackable_id: number;
+  track_id: number;
+  position: number;
+  name: string;
+  description: string;
+  section_id: number;
+};
+```
+
+<ParamField path="trackable_type" type="string" required>
+  Type of content: `"Workshop"`, `"Challenge"`, etc.
+</ParamField>
+
+<ParamField path="position" type="number" required>
+  Order within the track
+</ParamField>
+
+<ParamField path="section_id" type="number" required>
+  Which section this trackable belongs to
+</ParamField>
+
+<Note>
+  The pivot allows the same workshop or challenge to appear in multiple tracks with different positions and context.
+</Note>
+
+## API Functions
+
+### Fetching Tracks
+
+<Steps>
+  <Step title="Get All Tracks">
+    Retrieve all available tracks:
+    
+    ```typescript
+    const tracks = await getTracks();
+    ```
+    
+    Returns an array of `Track` objects.
+  </Step>
+
+  <Step title="Get Single Track">
+    Fetch a specific track by slug:
+    
+    ```typescript
+    const track = await getTrack("fullstack-javascript", request);
+    ```
+    
+    Returns a complete `Track` object with all trackables or `null` if not found.
+  </Step>
+</Steps>
+
+### Progress Tracking
+
+<Steps>
+  <Step title="Toggle Completion">
+    Mark a trackable item as completed or incomplete:
+    
+    ```typescript
+    const result = await toggleTrackableCompleted("trackable-123", request);
+    ```
+    
+    Returns:
+    ```typescript
+    {
+      success?: string;  // "Item marcado como concluído!" or "Item desmarcado"
+      error?: string;    // Error message if failed
+      timestamp?: string;
+      trackableId?: string;
+    }
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  The `toggleTrackableCompleted` function handles both marking and unmarking completion based on current state.
+</Note>
+
+## Track Progress Calculation
+
+Track completion is calculated from trackable completion:
+
+```typescript
+// Pseudo-code for track progress
+function calculateTrackProgress(track: Track, user: User) {
+  const totalItems = track.trackables.length;
+  const completedItems = track.trackables.filter(item => {
+    if (item.type === "workshop") {
+      return item.workshop_user?.status === "completed";
+    } else if (item.type === "challenge") {
+      return item.challengeUser?.current_user_status === "completed";
+    }
+    return item.completed;
+  }).length;
+  
+  return (completedItems / totalItems) * 100;
+}
+```
+
+<Steps>
+  <Step title="Workshop Completion">
+    Workshop is complete when all lessons are watched
+  </Step>
+
+  <Step title="Challenge Completion">
+    Challenge is complete when marked as finished by user
+  </Step>
+
+  <Step title="Custom Item Completion">
+    Track items marked via `toggleTrackableCompleted()`
+  </Step>
+</Steps>
+
+## Route Structure
+
+Tracks are rendered through:
+
+- **Listing**: `/_layout-app/_trilhas/trilhas/index.tsx`
+- **Detail**: `/_layout-app/_trilhas/trilhas_.$slug/index.tsx`
+- **Components**:
+  - `WorkshopTrackCard`: Displays workshop trackables
+  - `ChallengeTrackCard`: Displays challenge trackables
+
+<Info>
+  Track routes use the Portuguese term "trilhas" (tracks/paths) in URLs for localization.
+</Info>
+
+## Track Organization Best Practices
+
+<Steps>
+  <Step title="Logical Progression">
+    Order trackables from beginner to advanced:
+    - Use `position` values to control order
+    - Start with foundational workshops
+    - Progress to practical challenges
+  </Step>
+
+  <Step title="Section Grouping">
+    Organize content into thematic sections:
+    ```typescript
+    sections = [
+      {
+        name: "Fundamentals",
+        position: 1,
+        trackables: [...]
+      },
+      {
+        name: "Advanced Techniques",
+        position: 2,
+        trackables: [...]
+      }
+    ]
+    ```
+  </Step>
+
+  <Step title="Mixed Content">
+    Combine different content types:
+    - Workshops for theoretical knowledge
+    - Challenges for hands-on practice
+    - TrackItems for supplementary resources
+  </Step>
+
+  <Step title="Duration Estimation">
+    Set realistic `duration_in_minutes`:
+    - Sum workshop video durations
+    - Add estimated challenge completion times
+    - Include reading time for markdown content
+  </Step>
+</Steps>
+
+## Completion Tracking
+
+Track completion state is stored at multiple levels:
+
+<Steps>
+  <Step title="Trackable Level">
+    Each trackable has a `completed` boolean in its pivot data
+  </Step>
+
+  <Step title="Workshop Level">
+    Workshops track completion via `WorkshopUser.status`
+  </Step>
+
+  <Step title="Challenge Level">
+    Challenges track completion via `ChallengeUser.current_user_status`
+  </Step>
+
+  <Step title="Track Level">
+    Overall track progress calculated from all trackables
+  </Step>
+</Steps>
+
+## Related Types
+
+### Workshop
+Full workshop objects when trackables are expanded.
+
+### Challenge
+Full challenge objects when trackables are expanded.
+
+### Instructor
+Instructor information for workshops in the track.
+
+### Tag
+Technology and topic tags for categorization.
+
+### SidebarLesson
+Lesson data structure used in trackable lessons arrays.
+
+### ChallengeUser
+User-specific challenge progress and enrollment.

@@ -1,0 +1,382 @@
+---
+title: User
+description: User model types and functions for managing user accounts and profiles
+---
+
+## Overview
+
+The User model handles user account data, authentication, user settings, and user-related functionality on Codante.io.
+
+## Type Definitions
+
+### User
+
+Complete user account object.
+
+<Expandable title="User Properties">
+<ResponseField name="id" type="number" required>
+  Unique identifier for the user
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  User's full name
+</ResponseField>
+
+<ResponseField name="email" type="string" required>
+  User's email address
+</ResponseField>
+
+<ResponseField name="github_id" type="string" required>
+  GitHub account identifier
+</ResponseField>
+
+<ResponseField name="email_verified_at" type="string">
+  Email verification timestamp
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  Account creation timestamp
+</ResponseField>
+
+<ResponseField name="is_admin" type="boolean">
+  Whether user has admin privileges
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  Last update timestamp
+</ResponseField>
+
+<ResponseField name="is_pro" type="boolean" required>
+  Whether user has PRO subscription
+</ResponseField>
+
+<ResponseField name="avatar" type="UserAvatar" required>
+  User avatar information
+</ResponseField>
+
+<ResponseField name="settings" type="UserSettings | null" required>
+  User preferences and settings
+</ResponseField>
+
+<ResponseField name="linkedin_user" type="string">
+  LinkedIn username
+</ResponseField>
+
+<ResponseField name="discord_user" type="string">
+  Discord username
+</ResponseField>
+
+<ResponseField name="github_user" type="string">
+  GitHub username
+</ResponseField>
+</Expandable>
+
+### UserSettings
+
+User preferences and configuration.
+
+```typescript
+type UserSettings = {
+  show_badge: boolean;
+};
+```
+
+<ResponseField name="show_badge" type="boolean" required>
+  Whether to display the user's PRO or admin badge
+</ResponseField>
+
+### UserAvatar
+
+User avatar display information.
+
+```typescript
+type UserAvatar = {
+  badge: "pro" | "admin" | null;
+  avatar_url: string;
+  name: string;
+  github_user?: string;
+};
+```
+
+<ResponseField name="badge" type="string | null" required>
+  User badge type: `"pro"`, `"admin"`, or `null`
+</ResponseField>
+
+<ResponseField name="avatar_url" type="string" required>
+  URL to user's avatar image
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  User's display name
+</ResponseField>
+
+<ResponseField name="github_user" type="string">
+  GitHub username for profile link
+</ResponseField>
+
+### ChallengeUser
+
+Represents a user's participation and submission in a challenge.
+
+<Expandable title="ChallengeUser Properties">
+<ResponseField name="id" type="number" required>
+  Unique identifier for the challenge participation
+</ResponseField>
+
+<ResponseField name="user" type="User" required>
+  User account information
+</ResponseField>
+
+<ResponseField name="challenge" type="ChallengeSummary" required>
+  Challenge details
+</ResponseField>
+
+<ResponseField name="joined_discord" type="boolean" required>
+  Whether user joined the Discord server
+</ResponseField>
+
+<ResponseField name="completed" type="boolean" required>
+  Whether user completed the challenge
+</ResponseField>
+
+<ResponseField name="completed_at" type="string" required>
+  Completion timestamp
+</ResponseField>
+
+<ResponseField name="submission_url" type="string" required>
+  URL to deployed submission
+</ResponseField>
+
+<ResponseField name="fork_url" type="string | null" required>
+  URL to forked repository
+</ResponseField>
+
+<ResponseField name="submission_image_url" type="string" required>
+  Screenshot of submission
+</ResponseField>
+
+<ResponseField name="reactions" type="Reactions" required>
+  User reactions to the submission
+</ResponseField>
+
+<ResponseField name="avatar" type="UserAvatar" required>
+  User avatar information
+</ResponseField>
+
+<ResponseField name="is_solution" type="boolean" required>
+  Whether this is marked as an official solution
+</ResponseField>
+
+<ResponseField name="submitted_at" type="string | null" required>
+  Submission timestamp
+</ResponseField>
+
+<ResponseField name="created_at" type="string" required>
+  Enrollment creation timestamp
+</ResponseField>
+
+<ResponseField name="updated_at" type="string" required>
+  Last update timestamp
+</ResponseField>
+
+<ResponseField name="certificate" type="Certificate | null" required>
+  Certificate data if challenge is completed
+</ResponseField>
+
+<ResponseField name="comments" type="Comment[]" required>
+  Comments on the submission
+</ResponseField>
+
+<ResponseField name="listed" type="boolean" required>
+  Whether submission is publicly listed
+</ResponseField>
+</Expandable>
+
+## Functions
+
+### impersonate
+
+Allows an admin to impersonate another user for support purposes.
+
+<ParamField path="request" type="any" required>
+  Request object with admin authentication
+</ParamField>
+
+<ParamField path="userId" type="string" required>
+  ID of the user to impersonate
+</ParamField>
+
+```typescript
+async function impersonate(
+  request: any,
+  userId: string,
+): Promise<string | null>;
+```
+
+**Returns**: Authentication token for the impersonated user, or null on error
+
+**Example**:
+```typescript
+import { impersonate } from "~/lib/models/user.server";
+import { requireAuth } from "~/lib/services/auth.server";
+
+export async function action({ request }: ActionFunctionArgs) {
+  const user = await requireAuth(request);
+  
+  // Only admins can impersonate
+  if (!user.is_admin) {
+    throw new Response("Forbidden", { status: 403 });
+  }
+  
+  const formData = await request.formData();
+  const userId = formData.get("userId") as string;
+  
+  const token = await impersonate(request, userId);
+  
+  if (!token) {
+    return json({ error: "Failed to impersonate user" }, { status: 400 });
+  }
+  
+  // Store the impersonation token and redirect
+  return redirect("/dashboard", {
+    headers: {
+      "Set-Cookie": `impersonation_token=${token}; Path=/; HttpOnly`,
+    },
+  });
+}
+```
+
+## Usage Examples
+
+### Accessing Current User
+
+```typescript
+import { requireAuth } from "~/lib/services/auth.server";
+import type { User } from "~/lib/models/user.server";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const user = await requireAuth(request);
+  
+  return json({ user });
+}
+
+export default function ProfilePage() {
+  const { user } = useLoaderData<typeof loader>();
+  
+  return (
+    <div>
+      <img src={user.avatar.avatar_url} alt={user.name} />
+      <h1>{user.name}</h1>
+      <p>{user.email}</p>
+      {user.is_pro && <span>PRO Member</span>}
+      {user.is_admin && <span>Admin</span>}
+    </div>
+  );
+}
+```
+
+### Using User Data from Outlet Context
+
+```typescript
+import { useOutletContext } from "react-router";
+import type { User } from "~/lib/models/user.server";
+
+export default function SomePage() {
+  const { user } = useOutletContext<{ user: User }>();
+  
+  return (
+    <div>
+      <p>Welcome, {user.name}!</p>
+      {user.is_pro ? (
+        <p>You have access to all PRO content</p>
+      ) : (
+        <p>Upgrade to PRO for full access</p>
+      )}
+    </div>
+  );
+}
+```
+
+### Displaying User Avatar with Badge
+
+```typescript
+import type { UserAvatar } from "~/lib/models/user.server";
+
+function AvatarComponent({ avatar }: { avatar: UserAvatar }) {
+  return (
+    <div className="relative">
+      <img
+        src={avatar.avatar_url}
+        alt={avatar.name}
+        className="rounded-full"
+      />
+      {avatar.badge && (
+        <span className="badge">
+          {avatar.badge === "pro" ? "PRO" : "ADMIN"}
+        </span>
+      )}
+    </div>
+  );
+}
+```
+
+### Checking User Permissions
+
+```typescript
+import { requireAuth } from "~/lib/services/auth.server";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const user = await requireAuth(request);
+  
+  // Check if user has PRO access
+  if (!user.is_pro) {
+    throw redirect("/subscribe");
+  }
+  
+  // Check admin access
+  if (!user.is_admin) {
+    throw new Response("Forbidden", { status: 403 });
+  }
+  
+  return json({ user });
+}
+```
+
+### Displaying Challenge User Submission
+
+```typescript
+import type { ChallengeUser } from "~/lib/models/user.server";
+
+function SubmissionCard({ challengeUser }: { challengeUser: ChallengeUser }) {
+  return (
+    <div>
+      <div>
+        <img src={challengeUser.avatar.avatar_url} alt={challengeUser.user.name} />
+        <h3>{challengeUser.user.name}</h3>
+        {challengeUser.avatar.badge && (
+          <span>{challengeUser.avatar.badge.toUpperCase()}</span>
+        )}
+      </div>
+      
+      {challengeUser.submission_image_url && (
+        <img src={challengeUser.submission_image_url} alt="Submission" />
+      )}
+      
+      {challengeUser.submission_url && (
+        <a href={challengeUser.submission_url} target="_blank" rel="noopener">
+          View Live Project
+        </a>
+      )}
+      
+      {challengeUser.completed && challengeUser.certificate && (
+        <div>Certificate Available</div>
+      )}
+      
+      <div>
+        <p>Comments: {challengeUser.comments.length}</p>
+        <p>Submitted: {new Date(challengeUser.submitted_at).toLocaleDateString()}</p>
+      </div>
+    </div>
+  );
+}
+```

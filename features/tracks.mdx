@@ -1,0 +1,434 @@
+---
+title: 'Tracks (Trilhas)'
+description: 'Structured learning paths combining workshops, challenges, and resources'
+---
+
+## Overview
+
+Tracks (Trilhas) are curated learning paths that combine workshops, challenges, and additional resources into a structured curriculum. They provide a guided journey through a technology stack or development topic.
+
+<CardGroup cols={2}>
+  <Card title="Browse Tracks" icon="route" href="/trilhas">
+    Explore available learning tracks
+  </Card>
+  <Card title="Track Your Progress" icon="list-check" href="#progress-tracking">
+    Monitor completion status
+  </Card>
+</CardGroup>
+
+## Track Structure
+
+```typescript
+type Track = {
+  id: string;
+  name: string;
+  slug: string;
+  short_description: string;
+  description: string;
+  image_url?: string;
+  status: "draft" | "published" | "soon" | "archived";
+  difficulty: 1 | 2 | 3;
+  duration_in_minutes: number;
+  trackables: (WorkshopTrackable | ChallengeTrackable)[];
+  created_at: string;
+  updated_at: string;
+}
+```
+
+### Track Metadata
+
+- **Difficulty**: Rated from 1 (beginner) to 3 (advanced)
+- **Duration**: Estimated time to complete the entire track
+- **Status**: Publication state (draft, published, soon, archived)
+- **Trackables**: Collection of workshops, challenges, and resources
+
+## Trackable Items
+
+Tracks consist of multiple trackable items:
+
+<Tabs>
+  <Tab title="Workshop Trackables">
+    Video workshops integrated into the learning path.
+    
+    ```typescript
+    type WorkshopTrackable = {
+      id: number;
+      type: "workshop";
+      name: string;
+      slug: string;
+      video_url: string;
+      instructor: Instructor;
+      lessons: SidebarLesson[];
+      lesson_sections: {
+        name: string;
+        lesson_ids: number[];
+      }[];
+    }
+    ```
+    
+    <Info>
+    Workshop trackables display with instructor information and lesson counts.
+    </Info>
+  </Tab>
+  
+  <Tab title="Challenge Trackables">
+    Hands-on coding challenges for practical application.
+    
+    ```typescript
+    type ChallengeTrackable = {
+      id: number;
+      type: "challenge";
+      name: string;
+      slug: string;
+      image_url: string;
+      challengeUser: ChallengeUser;
+      track_lessons: SidebarLesson[];
+      solution: {
+        lessons: SidebarLesson[];
+        lesson_sections: LessonSection[];
+      };
+    }
+    ```
+    
+    <Note>
+    Challenges in tracks include step-by-step workflows and verification.
+    </Note>
+  </Tab>
+  
+  <Tab title="Additional Items">
+    External links, markdown content, and supplementary resources.
+    
+    ```typescript
+    type TrackItem = {
+      id: number;
+      type: "external_link" | "markdown";
+      name: string;
+      content: string;
+      track_section_id: number;
+      position: number;
+      status: "draft" | "published" | "soon" | "archived";
+      pivot?: TrackablePivot;
+      completed?: boolean;
+      is_premium?: boolean;
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Track Sections
+
+Tracks are organized into logical sections:
+
+```typescript
+type TrackSection = {
+  id: number;
+  track_id: number;
+  name: string;
+  description: string;
+  position: number;
+  instructors: Instructor[];
+  tags: Tag[];
+  trackables: (Challenge | Workshop | TrackItem)[];
+}
+```
+
+<Steps>
+  <Step title="Section Overview">
+    Each section has a name, description, and position in the track sequence
+  </Step>
+  
+  <Step title="Section Instructors">
+    View all instructors contributing to content in this section
+  </Step>
+  
+  <Step title="Section Tags">
+    Technologies and concepts covered in the section
+  </Step>
+  
+  <Step title="Section Content">
+    Collection of workshops, challenges, and resources
+  </Step>
+</Steps>
+
+## Progress Tracking
+
+Track your completion status for each item:
+
+```typescript
+type TrackablePivot = {
+  id: string;
+  trackable_type: string;
+  trackable_id: number;
+  track_id: number;
+  position: number;
+  name: string;
+  description: string;
+  section_id: number;
+}
+```
+
+### Marking Items Complete
+
+```typescript
+await toggleTrackableCompleted(trackableId, request);
+// Returns: { success: "Item marcado como concluído!" }
+// Or: { success: "Item desmarcado" }
+```
+
+<Info>
+Click the checkbox next to any trackable item to mark it as complete. This helps you track your progress through the learning path.
+</Info>
+
+### Completion States
+
+Each trackable item has a completion indicator:
+
+```typescript
+completed?: boolean;
+```
+
+<CardGroup cols={2}>
+  <Card title="In Progress" icon="spinner">
+    Items you've started but not completed
+  </Card>
+  <Card title="Completed" icon="circle-check">
+    Items marked as finished with checkmark
+  </Card>
+</CardGroup>
+
+## Track Card Components
+
+### Workshop Cards in Tracks
+
+```typescript
+<WorkshopTrackCard 
+  workshop={trackable} 
+  userIsPro={userIsPro}
+  moduleNumber={index + 1}
+/>
+```
+
+Displays:
+- Module number in sequence
+- Workshop title and instructor
+- Lesson count and duration
+- Completion checkbox
+- PRO badge if premium content
+
+### Challenge Cards in Tracks
+
+```typescript
+<ChallengeTrackCard
+  challenge={trackable}
+  userIsPro={userIsPro}
+  moduleNumber={index + 1}
+/>
+```
+
+Displays:
+- Module number in sequence
+- Challenge title and difficulty
+- Challenge status (joined, forked, submitted, completed)
+- Step progress indicators
+- Completion checkbox
+
+## Access Control
+
+### PRO Content
+
+Premium tracks or trackables require subscription:
+
+```typescript
+is_premium?: boolean;
+```
+
+<Note>
+Non-PRO users see a PRO overlay on premium content. Upgrade to access exclusive tracks and advanced learning paths.
+</Note>
+
+### Sign-In Required
+
+Guest users see a sign-in dialog when attempting to interact:
+
+```typescript
+<SignInDialog />
+// Prompts authentication for progress tracking
+```
+
+## Type Guards
+
+Differentiate between trackable types:
+
+```typescript
+function isWorkshopTrackable(
+  trackable: WorkshopTrackable | ChallengeTrackable
+): trackable is WorkshopTrackable {
+  return (trackable as WorkshopTrackable).lessons !== undefined;
+}
+```
+
+<Info>
+Use type guards to render appropriate components based on trackable type.
+</Info>
+
+## Track Navigation
+
+Tracks display in sequence with module numbers:
+
+```typescript
+const moduleNumber = track.trackables.findIndex(
+  (trackable) => trackable.slug === currentSlug
+) + 1;
+```
+
+<Steps>
+  <Step title="Sequential Order">
+    Items appear in curated order for optimal learning progression
+  </Step>
+  
+  <Step title="Module Numbers">
+    Each item is numbered (Module 1, Module 2, etc.)
+  </Step>
+  
+  <Step title="Visual Progress">
+    Completion checkboxes show your advancement through the track
+  </Step>
+</Steps>
+
+## External Links
+
+Tracks can include external resources:
+
+```typescript
+type: "external_link"
+content: string;  // URL to external resource
+```
+
+<Card title="External Resources" icon="arrow-up-right-from-square">
+  Links to documentation, articles, tools, or supplementary content that enhances the learning experience
+</Card>
+
+## Markdown Content
+
+Inline text content and instructions:
+
+```typescript
+type: "markdown"
+content: string;  // Markdown-formatted text
+```
+
+<Info>
+Markdown trackables can provide context, instructions, or explanatory content between workshops and challenges.
+</Info>
+
+## Track Difficulty
+
+<CardGroup cols={3}>
+  <Card title="Level 1" icon="seedling">
+    Foundational concepts for beginners
+  </Card>
+  <Card title="Level 2" icon="chart-simple">
+    Intermediate topics building on basics
+  </Card>
+  <Card title="Level 3" icon="mountain">
+    Advanced techniques and complex projects
+  </Card>
+</CardGroup>
+
+## API Reference
+
+### Get All Tracks
+
+```typescript
+await getTracks();
+// Returns: Array<Track>
+```
+
+### Get Track by Slug
+
+```typescript
+await getTrack(slug, request);
+// Returns: Track with full trackables
+```
+
+### Toggle Item Completion
+
+```typescript
+await toggleTrackableCompleted(trackableId, request);
+// Returns: { success: string } | { error: string }
+```
+
+## Error Handling
+
+```typescript
+if (!ok) {
+  return {
+    error: message,
+    timestamp: new Date().toISOString(),
+    trackableId,
+  };
+}
+```
+
+<Note>
+Completion toggle errors display toast notifications with retry options.
+</Note>
+
+## Component Integration
+
+### Track Items with Checkboxes
+
+```typescript
+<TrackItemCheckbox 
+  trackableId={trackable.pivot?.id}
+  completed={trackable.completed}
+/>
+```
+
+### Challenge Steps in Tracks
+
+```typescript
+<ChallengeSteps 
+  challenge={trackable}
+  showSubmissions={true}
+/>
+```
+
+### Workshop Lessons Display
+
+```typescript
+<WorkshopLessons
+  workshop={trackable}
+  lessonSections={trackable.lesson_sections}
+  lessons={trackable.lessons}
+/>
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Follow Sequence" icon="arrow-down-1-9">
+    Complete trackables in order for optimal learning progression
+  </Card>
+  <Card title="Mark Progress" icon="square-check">
+    Check off items as you complete them to track advancement
+  </Card>
+  <Card title="Complete Challenges" icon="code">
+    Practice concepts from workshops in the associated challenges
+  </Card>
+  <Card title="Review Solutions" icon="graduation-cap">
+    Study video solutions after attempting challenges yourself
+  </Card>
+</CardGroup>
+
+## Lazy Loading
+
+Tracks implement lazy loading for performance:
+
+```typescript
+useLazyLoading();  // Loads track items progressively
+```
+
+<Info>
+Track content loads as you scroll, improving initial page load performance for long learning paths.
+</Info>

@@ -1,0 +1,505 @@
+---
+title: Architecture Overview
+description: Understand the technical architecture, routing patterns, and design principles behind Codante.io
+---
+
+# Architecture Overview
+
+Codente.io is built as a modern, full-stack React Router v7 application with server-side rendering, optimized data loading, and a sophisticated component architecture.
+
+## Tech Stack
+
+The platform leverages cutting-edge web technologies to deliver a high-performance, accessible learning experience.
+
+### Core Technologies
+
+<CardGroup cols={2}>
+  <Card title="React Router v7" icon="route">
+    Full-stack framework (formerly Remix) with Vite, providing SSR, optimized data loading, and modern routing.
+  </Card>
+  
+  <Card title="React 19.2+" icon="react">
+    Latest React with server components support, improved performance, and enhanced developer experience.
+  </Card>
+  
+  <Card title="TypeScript 5.9+" icon="code">
+    Fully typed codebase ensuring type safety across client and server code.
+  </Card>
+  
+  <Card title="TailwindCSS v4" icon="palette">
+    Utility-first CSS with custom design system, dark mode, and responsive breakpoints.
+  </Card>
+</CardGroup>
+
+### UI & Animations
+
+- **Radix UI** - Accessible, unstyled UI primitives for dialogs, dropdowns, tooltips, and more
+- **Framer Motion** - Smooth animations and transitions with custom motion components
+- **Lucide React** - Modern icon library
+- **class-variance-authority** - Type-safe component variants
+
+### Backend Integration
+
+- **Axios** - Configured HTTP client with server-side session management
+- **Zod** - Schema validation for environment variables and API responses
+- **remix-auth** - Authentication with GitHub and Discord OAuth providers
+
+## Route Architecture
+
+The application uses React Router v7's file-based routing with a sophisticated layout system.
+
+### Layout Patterns
+
+Codente.io organizes routes using multiple layout groups:
+
+```
+app/routes/
+├── _layout-app/          # Main application layout (authenticated users)
+│   ├── mini-projetos/    # Challenges section
+│   ├── workshops/        # Workshops section
+│   ├── dashboard/        # User dashboard
+│   └── minha-conta/      # Account settings
+├── _layout-raw/          # Minimal layout for players and demos
+│   └── player/           # Video/lesson player
+├── _landing-page/        # Landing page components
+│   └── components/       # Shared landing components
+├── _api/                 # API routes
+│   └── webhooks/         # Webhook handlers
+└── index.tsx             # Homepage
+```
+
+<Info>
+The `_layout-*` prefix creates route groups that share a common layout without affecting the URL structure.
+</Info>
+
+### Route Groups
+
+<CardGroup cols={2}>
+  <Card title="_layout-app" icon="layout">
+    Full application layout with navbar, footer, and authentication. Used for main content pages.
+  </Card>
+  
+  <Card title="_layout-raw" icon="minimize">
+    Minimal layout for distraction-free experiences like video players and interactive demos.
+  </Card>
+  
+  <Card title="_landing-page" icon="home">
+    Landing page specific layout with marketing components and conversion optimization.
+  </Card>
+  
+  <Card title="_api" icon="server">
+    API routes for webhooks, server actions, and backend integration.
+  </Card>
+</CardGroup>
+
+### Key Route Features
+
+**Authentication Routes:**
+- Login, register, OAuth callbacks
+- Protected routes use `requireAuth()` in loaders
+- Guest-only routes use `requireGuest()`
+
+**Content Routes:**
+- Mini-projetos (challenges) with submissions and galleries
+- Workshops with video player and progress tracking
+- Trilhas (learning tracks) with curated content paths
+
+**User Routes:**
+- Dashboard with personalized content
+- Account management (minha-conta)
+- Certificates (certificados)
+
+**Subscription Routes:**
+- Payment and plan management
+- Stripe integration for PRO subscriptions
+
+## Component Architecture
+
+Components are organized by purpose and reusability:
+
+```
+app/components/
+├── _layouts/
+│   ├── navbar.tsx              # Main navigation
+│   ├── footer.tsx              # Site footer
+│   ├── root-layout.tsx         # Base layout wrapper
+│   ├── google-tag-manager.tsx  # Analytics
+│   └── background-blur.tsx     # Visual effects
+├── features/
+│   ├── auth/                   # Authentication UI
+│   ├── comments/               # Comment system
+│   ├── reactions/              # Like/reaction features
+│   ├── submission-card/        # Project submissions
+│   └── error-handling/         # Error pages (404, 500)
+└── ui/
+    ├── button.tsx              # Button component
+    ├── dialog.tsx              # Modal dialogs
+    ├── cards/                  # Card components
+    ├── motion/                 # Animation components
+    └── loading-bar.tsx         # Loading indicator
+```
+
+### Component Patterns
+
+<Steps>
+  <Step title="Layout Components (_layouts/)">
+    Structural components that define the page layout, navigation, and overall structure.
+    
+    ```tsx
+    import AppLayout from "~/components/_layouts/root-layout";
+    
+    export default function HomePage() {
+      const { user } = useOutletContext<{ user: User }>();
+      
+      return (
+        <AppLayout user={user}>
+          {/* Page content */}
+        </AppLayout>
+      );
+    }
+    ```
+  </Step>
+
+  <Step title="Feature Components (features/)">
+    Domain-specific components tied to platform features like authentication, comments, or submissions.
+    
+    These components encapsulate business logic and feature-specific UI patterns.
+  </Step>
+
+  <Step title="UI Components (ui/)">
+    Reusable, generic components built on Radix UI primitives:
+    
+    ```tsx
+    import { Button } from "~/components/ui/button";
+    import { Dialog } from "~/components/ui/dialog";
+    import { Card } from "~/components/ui/cards/card";
+    ```
+  </Step>
+</Steps>
+
+## Data Loading & State Management
+
+### Server-Side Data Loading
+
+React Router v7 uses loaders for server-side data fetching:
+
+```tsx
+export async function loader({ request }: { request: Request }) {
+  const userData = await user({ request });
+  const homeInfo = await getHome();
+  
+  return {
+    user: userData,
+    homeInfo,
+  };
+}
+
+export default function HomePage() {
+  const { homeInfo } = useLoaderData<typeof loader>();
+  const { user } = useOutletContext<{ user: User }>();
+  
+  // Component logic
+}
+```
+
+<Note>
+Loaders run on the server and provide type-safe data to route components. This ensures optimal performance and SEO.
+</Note>
+
+### State Management
+
+The application uses React context for global state:
+
+- **ColorModeProvider** - Dark/light mode management
+- **Outlet Context** - User authentication state passed through route hierarchy
+- **Local State** - React hooks for component-level state
+
+### Environment Variables
+
+Environment configuration uses Zod for type-safe validation:
+
+```tsx
+// app/lib/models/environment.ts
+import { z } from "zod";
+
+const envSchema = z.object({
+  SESSION_SECRET: z.string(),
+  API_HOST: z.string(),
+  BASE_URL: z.string(),
+  GITHUB_ID: z.string(),
+  GITHUB_SECRET: z.string(),
+  // ... more variables
+});
+
+export function environment() {
+  return envSchema.parse(process.env);
+}
+```
+
+## Authentication System
+
+Authentication is handled server-side with multiple OAuth providers:
+
+### Authentication Flow
+
+<Steps>
+  <Step title="OAuth Provider Selection">
+    Users can authenticate via GitHub or Discord OAuth.
+  </Step>
+
+  <Step title="Server-Side Session">
+    Sessions are managed with secure, HTTP-only cookies:
+    
+    ```tsx
+    // app/lib/services/auth.server.ts
+    import { createCookieSessionStorage } from "react-router";
+    
+    export const sessionStorage = createCookieSessionStorage({
+      cookie: {
+        name: "__session",
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+      },
+    });
+    ```
+  </Step>
+
+  <Step title="User Context Propagation">
+    User data flows through the application via outlet context:
+    
+    ```tsx
+    // In root loader
+    const userData = await user({ request });
+    
+    // In root component
+    <Outlet context={{ user: userData }} />
+    
+    // In child routes
+    const { user } = useOutletContext<{ user: User }>();
+    ```
+  </Step>
+</Steps>
+
+### Protected Routes
+
+```tsx
+// Require authentication
+export async function loader({ request }: { request: Request }) {
+  await requireAuth(request);
+  // ... protected loader logic
+}
+
+// Require guest (not authenticated)
+export async function loader({ request }: { request: Request }) {
+  await requireGuest(request);
+  // ... guest-only loader logic
+}
+```
+
+## Models & Services
+
+### Models (app/lib/models/)
+
+Server-side models handle data fetching and business logic:
+
+- `challenge.server.ts` - Challenge/mini-projeto data
+- `workshop.server.ts` - Workshop content and lessons
+- `user.server.ts` - User profiles and authentication
+- `subscription.server.ts` - Payment and subscription management
+- `home.server.ts` - Homepage data aggregation
+
+Each model exports TypeScript types and async functions:
+
+```tsx
+// app/lib/models/home.server.ts
+export type HomeInfo = {
+  featured_challenges: ChallengeCard[];
+  featured_workshops: WorkshopCard[];
+  featured_submissions: Submission[];
+  // ...
+};
+
+export async function getHome(): Promise<HomeInfo> {
+  // Server-side data fetching
+}
+```
+
+### Services (app/lib/services/)
+
+<CardGroup cols={2}>
+  <Card title="auth.server.ts" icon="lock">
+    Core authentication logic with session management and user verification.
+  </Card>
+  
+  <Card title="github-auth.server.ts" icon="github">
+    GitHub OAuth strategy configuration and callback handling.
+  </Card>
+  
+  <Card title="discord-auth.server.ts" icon="discord">
+    Discord OAuth integration for community-focused authentication.
+  </Card>
+  
+  <Card title="axios.server.ts" icon="server">
+    Configured Axios instance with auth headers and interceptors for API communication.
+  </Card>
+</CardGroup>
+
+## Styling System
+
+### TailwindCSS Configuration
+
+The application uses TailwindCSS v4 with extensive customization:
+
+- **Custom Design System** - Brand colors, spacing, and typography
+- **Dark Mode** - CSS custom properties with ColorModeProvider
+- **Responsive Breakpoints** - Mobile-first design with standard breakpoints
+- **Custom Patterns** - Background patterns like `bg-grainy`
+- **Plugins** - Forms, container queries, typography, animations
+
+### Utility Functions
+
+```tsx
+// app/lib/utils/cn.ts
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+```
+
+The `cn()` utility combines clsx for conditional classes and tailwind-merge to resolve conflicts:
+
+```tsx
+<div className={cn(
+  "base-styles",
+  condition && "conditional-styles",
+  "override-styles"
+)} />
+```
+
+### Component Variants
+
+Using class-variance-authority for type-safe variants:
+
+```tsx
+import { cva } from "class-variance-authority";
+
+const buttonVariants = cva("base-button-styles", {
+  variants: {
+    variant: {
+      primary: "bg-brand-500 text-white",
+      secondary: "bg-gray-200 text-gray-800",
+    },
+    size: {
+      sm: "px-3 py-1.5 text-sm",
+      lg: "px-6 py-3 text-lg",
+    },
+  },
+});
+```
+
+## Performance Optimizations
+
+### Server-Side Rendering
+
+All routes are server-rendered by default, ensuring:
+- Fast initial page loads
+- SEO-friendly content
+- Progressive enhancement
+
+### Prefetch Optimization
+
+The root loader implements prefetch caching:
+
+```tsx
+if (purpose === "prefetch") {
+  headers.set("Cache-Control", "private, max-age=20");
+}
+```
+
+### Code Splitting
+
+- Route-based automatic code splitting
+- Dynamic imports for heavy components
+- Lazy loading for images and videos
+
+### Image Optimization
+
+- WebP format with fallbacks
+- Lazy loading via vanilla-lazyload
+- Responsive images with srcset
+
+<Info>
+The platform uses a custom lazy loading hook (`app/lib/hooks/use-lazy-loading.ts`) to efficiently load images and media.
+</Info>
+
+## Accessibility
+
+### Radix UI Primitives
+
+All interactive components are built on Radix UI primitives, ensuring:
+- WCAG 2.1 compliance
+- Keyboard navigation
+- Screen reader support
+- Focus management
+
+### Motion Preferences
+
+Animations respect user preferences:
+
+```tsx
+// Motion components check prefers-reduced-motion
+import { motion } from "framer-motion";
+
+<motion.div
+  initial={{ opacity: 0 }}
+  animate={{ opacity: 1 }}
+  // Automatically respects reduced motion preference
+/>
+```
+
+## Development Tools
+
+### Type Generation
+
+React Router v7 automatically generates route types:
+
+```bash
+npm run typecheck
+# Runs: react-router typegen && tsc
+```
+
+### Linting & Formatting
+
+- **ESLint** - Code quality and best practices
+- **Prettier** - Consistent code formatting
+- **Husky** - Git hooks for pre-commit checks
+- **lint-staged** - Run checks only on staged files
+
+### Development UI
+
+In development mode, a breakpoint indicator shows the current Tailwind breakpoint:
+
+```tsx
+{getPublicEnv("NODE_ENV") !== "production" && (
+  <div className="fixed z-50 bottom-2 left-2 ...">
+    <span className="block sm:hidden">xs</span>
+    <span className="hidden sm:block md:hidden">sm</span>
+    {/* ... more breakpoints */}
+  </div>
+)}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Component Library" icon="palette" href="/components">
+    Explore the reusable UI components and patterns used throughout the application.
+  </Card>
+  
+  <Card title="API Reference" icon="book" href="/api-reference">
+    Learn about the backend API structure and available endpoints.
+  </Card>
+</CardGroup>

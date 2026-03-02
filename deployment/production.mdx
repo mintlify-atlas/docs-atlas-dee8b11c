@@ -1,0 +1,539 @@
+---
+title: 'Production Deployment'
+description: 'Complete guide to deploying Codante.io to production'
+---
+
+## Overview
+
+This guide covers the complete process of deploying Codante.io to a production environment, from preparation to monitoring.
+
+## Prerequisites
+
+Before deploying to production, ensure you have:
+
+- Node.js >= 20 installed on the target server
+- All required environment variables configured
+- Database and API backend accessible
+- OAuth applications configured (GitHub and Discord)
+- reCAPTCHA keys for production domain
+
+<Warning>
+Ensure your Node.js version is 20 or higher. The application will not run on older versions.
+</Warning>
+
+## Deployment Steps
+
+<Steps>
+  <Step title="Prepare Environment Variables">
+    Create a `.env.production` file with all required variables:
+    
+    ```bash
+    NODE_ENV=production
+    SESSION_SECRET=your-production-secret-key-min-32-chars
+    API_HOST=https://api.codante.io
+    BASE_URL=https://codante.io
+    
+    # GitHub OAuth
+    GITHUB_ID=prod_github_client_id
+    GITHUB_SECRET=prod_github_client_secret
+    GITHUB_CALLBACK_URL=https://codante.io/auth/github/callback
+    
+    # Discord OAuth
+    DISCORD_APP_CLIENT_ID=prod_discord_client_id
+    DISCORD_APP_SECRET=prod_discord_client_secret
+    
+    # reCAPTCHA
+    RECAPTCHA_SITE_KEY=production_site_key
+    RECAPTCHA_SECRET_KEY=production_secret_key
+    ```
+    
+    See [Environment Configuration](/deployment/environment) for detailed variable descriptions.
+  </Step>
+
+  <Step title="Install Dependencies">
+    Install production dependencies:
+    
+    ```bash
+    npm ci --production=false
+    ```
+    
+    <Note>
+    Use `npm ci` instead of `npm install` for reproducible builds based on `package-lock.json`.
+    </Note>
+  </Step>
+
+  <Step title="Run Quality Checks">
+    Verify code quality before building:
+    
+    ```bash
+    # Run type checking
+    npm run typecheck
+    
+    # Run linting
+    npm run lint
+    ```
+    
+    Fix any errors before proceeding.
+  </Step>
+
+  <Step title="Build for Production">
+    Create an optimized production build:
+    
+    ```bash
+    npm run build
+    ```
+    
+    This command uses React Router's build system to:
+    - Generate server code in `build/server/index.js`
+    - Create optimized client bundles in `public/build/`
+    - Perform code splitting and tree shaking
+    - Minify JavaScript and CSS
+  </Step>
+
+  <Step title="Test Production Build Locally">
+    Test the production build before deploying:
+    
+    ```bash
+    npm start
+    ```
+    
+    Verify the application runs correctly and all features work as expected.
+  </Step>
+
+  <Step title="Deploy to Server">
+    Transfer the following to your production server:
+    
+    - `build/` directory
+    - `public/` directory (including `public/build/`)
+    - `package.json` and `package-lock.json`
+    - `.env.production`
+    - `node_modules/` or run `npm ci --production`
+  </Step>
+
+  <Step title="Start Production Server">
+    Start the application on your production server:
+    
+    ```bash
+    npm start
+    ```
+    
+    The server will use `@react-router/serve` to serve the built application.
+  </Step>
+</Steps>
+
+## Production Server Command
+
+The production start command is defined in `package.json`:
+
+```json
+"start": "dotenv -e .env.production react-router-serve ./build/server/index.js"
+```
+
+This command:
+1. Loads environment variables from `.env.production` using `dotenv-cli`
+2. Runs the React Router server with the compiled server entry point
+3. Serves both SSR pages and static assets
+
+## Process Management
+
+For production environments, use a process manager to ensure the application stays running:
+
+### Using PM2
+
+```bash
+# Install PM2 globally
+npm install -g pm2
+
+# Start the application
+pm2 start npm --name "codante" -- start
+
+# Save the PM2 configuration
+pm2 save
+
+# Set up PM2 to start on system boot
+pm2 startup
+```
+
+### PM2 Configuration File
+
+Create `ecosystem.config.js`:
+
+```javascript
+module.exports = {
+  apps: [{
+    name: 'codante',
+    script: 'npm',
+    args: 'start',
+    env: {
+      NODE_ENV: 'production',
+    },
+    instances: 'max',
+    exec_mode: 'cluster',
+    max_memory_restart: '1G',
+    error_file: './logs/err.log',
+    out_file: './logs/out.log',
+    log_file: './logs/combined.log',
+    time: true
+  }]
+};
+```
+
+Start with:
+
+```bash
+pm2 start ecosystem.config.js
+```
+
+### Using systemd
+
+Create a systemd service file at `/etc/systemd/system/codante.service`:
+
+```ini
+[Unit]
+Description=Codante.io Application
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/codante
+Environment="NODE_ENV=production"
+ExecStart=/usr/bin/npm start
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start the service:
+
+```bash
+sudo systemctl enable codante
+sudo systemctl start codante
+sudo systemctl status codante
+```
+
+## Reverse Proxy Configuration
+
+### Nginx
+
+Configure Nginx as a reverse proxy:
+
+```nginx
+server {
+    listen 80;
+    server_name codante.io www.codante.io;
+    
+    # Redirect HTTP to HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name codante.io www.codante.io;
+    
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/codante.io/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/codante.io/privkey.pem;
+    
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    
+    # Proxy to Node.js application
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+    
+    # Cache static assets
+    location /build/ {
+        proxy_pass http://localhost:3000;
+        proxy_cache_valid 200 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+```
+
+Test and reload Nginx:
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+## SSL/TLS Configuration
+
+Set up HTTPS using Let's Encrypt:
+
+```bash
+# Install Certbot
+sudo apt-get update
+sudo apt-get install certbot python3-certbot-nginx
+
+# Obtain SSL certificate
+sudo certbot --nginx -d codante.io -d www.codante.io
+
+# Set up automatic renewal
+sudo certbot renew --dry-run
+```
+
+## Environment-Specific Configuration
+
+### Production Optimizations
+
+Ensure these settings are configured:
+
+<CodeGroup>
+```bash Production Environment
+NODE_ENV=production
+```
+
+```javascript Vite SSR Config
+// vite.config.ts
+ssr: {
+  noExternal: ["react-easy-crop", "tslib"],
+}
+```
+</CodeGroup>
+
+### Performance Settings
+
+- Enable HTTP/2 in your reverse proxy
+- Configure CDN for static assets in `public/build/`
+- Use connection pooling for database connections
+- Enable gzip/brotli compression
+
+## Monitoring and Logging
+
+### Application Logs
+
+Monitor application logs:
+
+```bash
+# PM2 logs
+pm2 logs codante
+
+# systemd logs
+sudo journalctl -u codante -f
+```
+
+### Health Checks
+
+Implement health check endpoints and monitoring:
+
+```bash
+# Simple health check
+curl https://codante.io/
+
+# Monitor with uptime services
+# - UptimeRobot
+# - Pingdom
+# - StatusCake
+```
+
+## Continuous Deployment
+
+### GitHub Actions Example
+
+Create `.github/workflows/deploy.yml`:
+
+```yaml
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests
+        run: |
+          npm run typecheck
+          npm run lint
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Deploy to server
+        uses: easingthemes/ssh-deploy@main
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+          REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          SOURCE: "build/ public/"
+          TARGET: "/var/www/codante/"
+      
+      - name: Restart application
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www/codante
+            pm2 restart codante
+```
+
+## Database Migrations
+
+If your deployment includes database changes:
+
+```bash
+# Run migrations before deploying new code
+npm run db:migrate
+
+# Deploy application
+npm run build
+pm2 restart codante
+```
+
+## Rollback Strategy
+
+Maintain the ability to rollback deployments:
+
+```bash
+# Keep previous builds
+cp -r build build.backup.$(date +%Y%m%d-%H%M%S)
+
+# Rollback if needed
+pm2 stop codante
+rm -rf build
+mv build.backup.20260302-120000 build
+pm2 start codante
+```
+
+## Security Checklist
+
+<Steps>
+  <Step title="Secrets Management">
+    - Use strong `SESSION_SECRET` (minimum 32 characters)
+    - Never commit `.env.production` to version control
+    - Rotate secrets periodically
+  </Step>
+
+  <Step title="OAuth Configuration">
+    - Use production OAuth applications
+    - Verify callback URLs match exactly
+    - Restrict OAuth scopes to minimum required
+  </Step>
+
+  <Step title="Server Security">
+    - Keep Node.js and npm updated
+    - Run application as non-root user
+    - Configure firewall (allow only 80, 443, SSH)
+    - Enable automatic security updates
+  </Step>
+
+  <Step title="HTTPS">
+    - Use valid SSL/TLS certificates
+    - Enable HSTS headers
+    - Configure secure cipher suites
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### Application Won't Start
+
+Check environment variables:
+
+```bash
+# Verify all required variables are set
+dotenv -e .env.production -- node -e "console.log(process.env)"
+
+# Test environment validation
+node -e "require('./build/server/index.js')"
+```
+
+### Build Failures
+
+```bash
+# Clear build cache
+rm -rf build/ public/build/ node_modules/.vite
+
+# Reinstall dependencies
+rm -rf node_modules package-lock.json
+npm install
+
+# Rebuild
+npm run build
+```
+
+### Performance Issues
+
+Monitor resource usage:
+
+```bash
+# Check Node.js memory usage
+pm2 monit
+
+# View application metrics
+pm2 status
+
+# Analyze logs for errors
+pm2 logs codante --lines 100
+```
+
+## Scaling Considerations
+
+### Horizontal Scaling
+
+Run multiple instances with PM2 cluster mode:
+
+```javascript
+// ecosystem.config.js
+module.exports = {
+  apps: [{
+    name: 'codante',
+    script: 'npm',
+    args: 'start',
+    instances: 4, // or 'max' for all CPU cores
+    exec_mode: 'cluster',
+  }]
+};
+```
+
+### Load Balancing
+
+Use Nginx or a dedicated load balancer to distribute traffic across multiple application instances.
+
+### CDN Integration
+
+Serve static assets from a CDN:
+
+- Upload `public/build/` contents to CDN
+- Configure asset URLs in application
+- Set appropriate cache headers
+
+## Next Steps
+
+After successful deployment:
+
+1. Set up monitoring and alerting
+2. Configure automated backups
+3. Implement logging aggregation
+4. Plan for disaster recovery
+5. Document runbook for common issues

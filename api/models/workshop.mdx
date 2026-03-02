@@ -1,0 +1,430 @@
+---
+title: Workshop
+description: Workshop model types and functions for managing educational workshop content
+---
+
+## Overview
+
+The Workshop model manages educational workshop content on Codante.io, including lessons, instructor information, user progress tracking, and related challenges.
+
+## Type Definitions
+
+### WorkshopUser
+
+Represents a user's enrollment and progress in a workshop.
+
+```typescript
+type WorkshopUser = {
+  id: number;
+  workshop_id: number;
+  user_id: number;
+  status: "in-progress" | "completed";
+  completed_at: string;
+  created_at: string;
+  updated_at: string;
+  certificate: Certificate;
+};
+```
+
+<ResponseField name="id" type="number" required>
+  Unique identifier for the workshop enrollment
+</ResponseField>
+
+<ResponseField name="workshop_id" type="number" required>
+  Workshop identifier
+</ResponseField>
+
+<ResponseField name="user_id" type="number" required>
+  User identifier
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Progress status: `"in-progress"` or `"completed"`
+</ResponseField>
+
+<ResponseField name="completed_at" type="string" required>
+  Completion timestamp
+</ResponseField>
+
+<ResponseField name="certificate" type="Certificate" required>
+  Certificate data if workshop is completed
+</ResponseField>
+
+### Workshop
+
+Complete workshop object with all details.
+
+<Expandable title="Workshop Properties">
+<ResponseField name="id" type="string | number" required>
+  Unique identifier for the workshop
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Workshop name
+</ResponseField>
+
+<ResponseField name="slug" type="string" required>
+  URL-friendly slug
+</ResponseField>
+
+<ResponseField name="short_description" type="string" required>
+  Brief description
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Workshop status: `"draft"`, `"published"`, `"soon"`, `"archived"`, or `"streaming"`
+</ResponseField>
+
+<ResponseField name="description" type="string" required>
+  Full workshop description
+</ResponseField>
+
+<ResponseField name="image_url" type="string">
+  Workshop cover image URL
+</ResponseField>
+
+<ResponseField name="video_url" type="string">
+  Introduction video URL
+</ResponseField>
+
+<ResponseField name="difficulty" type="1 | 2 | 3" required>
+  Difficulty level (1: easy, 2: medium, 3: hard)
+</ResponseField>
+
+<ResponseField name="duration_in_seconds" type="number" required>
+  Total duration in seconds
+</ResponseField>
+
+<ResponseField name="published_at" type="string">
+  Publication timestamp
+</ResponseField>
+
+<ResponseField name="streaming_url" type="string | null">
+  Live streaming URL if applicable
+</ResponseField>
+
+<ResponseField name="resources" type="Array" required>
+  Workshop resources (links, files, etc.)
+  ```typescript
+  resources: {
+    name: string;
+    type: string;
+    url: string;
+  }[];
+  ```
+</ResponseField>
+
+<ResponseField name="instructor" type="Instructor" required>
+  Workshop instructor information
+</ResponseField>
+
+<ResponseField name="is_standalone" type="boolean" required>
+  Whether workshop exists independently or is part of a track
+</ResponseField>
+
+<ResponseField name="lesson_sections" type="Array">
+  Organization of lessons into sections
+  ```typescript
+  lesson_sections?: {
+    name: string;
+    lesson_ids: number[];
+  }[];
+  ```
+</ResponseField>
+
+<ResponseField name="lessons" type="SidebarLesson[]" required>
+  Array of workshop lessons
+</ResponseField>
+
+<ResponseField name="tags" type="Tag[]" required>
+  Technology tags
+</ResponseField>
+
+<ResponseField name="first_unwatched_lesson" type="SidebarLesson | null" required>
+  Next lesson to watch (or null if all completed)
+</ResponseField>
+
+<ResponseField name="challenge" type="Challenge">
+  Related challenge if applicable
+</ResponseField>
+
+<ResponseField name="workshop_user" type="WorkshopUser" required>
+  Current user's enrollment data
+</ResponseField>
+
+<ResponseField name="pivot" type="TrackablePivot">
+  Track relationship data if workshop is part of a track
+</ResponseField>
+
+<ResponseField name="completed" type="boolean">
+  Whether current user completed the workshop
+</ResponseField>
+
+<ResponseField name="is_premium" type="boolean">
+  Whether workshop requires PRO subscription
+</ResponseField>
+</Expandable>
+
+### WorkshopCard
+
+Lightweight workshop object for listing pages.
+
+<Expandable title="WorkshopCard Properties">
+<ResponseField name="id" type="string" required>
+  Unique identifier
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Workshop name
+</ResponseField>
+
+<ResponseField name="slug" type="string" required>
+  URL-friendly slug
+</ResponseField>
+
+<ResponseField name="video_url" type="string">
+  Introduction video URL
+</ResponseField>
+
+<ResponseField name="duration_in_seconds" type="number" required>
+  Total duration in seconds
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Workshop status
+</ResponseField>
+
+<ResponseField name="is_standalone" type="boolean" required>
+  Standalone status
+</ResponseField>
+
+<ResponseField name="is_premium" type="boolean" required>
+  Premium requirement
+</ResponseField>
+
+<ResponseField name="lessons_count" type="number" required>
+  Number of lessons
+</ResponseField>
+
+<ResponseField name="instructor" type="object" required>
+  Instructor information
+  ```typescript
+  instructor: {
+    id: number;
+    name: string;
+    company: string;
+    avatar_url: string;
+  };
+  ```
+</ResponseField>
+
+<ResponseField name="published_at" type="string">
+  Publication date
+</ResponseField>
+
+<ResponseField name="streaming_url" type="string | null">
+  Streaming URL
+</ResponseField>
+
+<ResponseField name="pivot" type="object">
+  User progress data
+  ```typescript
+  pivot?: {
+    status: string;
+    completed_at: string;
+    started_at: string;
+    percentage_completed: number;
+  };
+  ```
+</ResponseField>
+</Expandable>
+
+## Functions
+
+### getWorkshops
+
+Fetches a list of workshops with optional technology filter.
+
+<ParamField path="tech" type="string" required>
+  Technology filter (empty string for all workshops)
+</ParamField>
+
+```typescript
+async function getWorkshops({
+  tech,
+}: {
+  tech: string;
+}): Promise<Array<WorkshopCard>>;
+```
+
+**Returns**: Array of workshop cards
+
+**Example**:
+```typescript
+import { getWorkshops } from "~/lib/models/workshop.server";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const url = new URL(request.url);
+  const tech = url.searchParams.get("tech") || "";
+  
+  const workshops = await getWorkshops({ tech });
+  
+  return { workshops };
+}
+```
+
+### getWorkshop
+
+Fetches a single workshop by slug.
+
+<ParamField path="slug" type="string" required>
+  Workshop slug identifier
+</ParamField>
+
+<ParamField path="request" type="any" required>
+  Request object for authentication
+</ParamField>
+
+```typescript
+async function getWorkshop(
+  slug: string,
+  request: any,
+): Promise<Workshop | null>;
+```
+
+**Returns**: Workshop object or null if not found
+
+**Example**:
+```typescript
+import { getWorkshop } from "~/lib/models/workshop.server";
+
+export async function loader({ params, request }: LoaderFunctionArgs) {
+  const workshop = await getWorkshop(params.slug, request);
+  
+  if (!workshop) {
+    throw new Response("Not Found", { status: 404 });
+  }
+  
+  return { workshop };
+}
+```
+
+### userJoinedWorkshop
+
+Enrolls the current user in a workshop.
+
+<ParamField path="slug" type="string" required>
+  Workshop slug
+</ParamField>
+
+<ParamField path="request" type="any" required>
+  Request object for authentication
+</ParamField>
+
+```typescript
+async function userJoinedWorkshop(
+  slug: string,
+  request: any,
+): Promise<{ message?: string }>;
+```
+
+**Returns**: Success message or error
+
+**Example**:
+```typescript
+import { userJoinedWorkshop } from "~/lib/models/workshop.server";
+
+export async function action({ params, request }: ActionFunctionArgs) {
+  const result = await userJoinedWorkshop(params.slug, request);
+  
+  if (!result) {
+    return json({ error: "Failed to join workshop" }, { status: 400 });
+  }
+  
+  return json(result);
+}
+```
+
+## Usage Examples
+
+### Listing Workshops with Filter
+
+```typescript
+import { getWorkshops } from "~/lib/models/workshop.server";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const url = new URL(request.url);
+  const techFilter = url.searchParams.get("tecnologia") || "";
+  
+  const workshops = await getWorkshops({ tech: techFilter });
+  
+  return json({ workshops });
+}
+
+export default function WorkshopsPage() {
+  const { workshops } = useLoaderData<typeof loader>();
+  
+  return (
+    <div>
+      {workshops.map((workshop) => (
+        <WorkshopCard key={workshop.id} workshop={workshop} />
+      ))}
+    </div>
+  );
+}
+```
+
+### Workshop Detail Page
+
+```typescript
+import { getWorkshop } from "~/lib/models/workshop.server";
+import { requireAuth } from "~/lib/services/auth.server";
+
+export async function loader({ params, request }: LoaderFunctionArgs) {
+  await requireAuth(request);
+  
+  const workshop = await getWorkshop(params.slug, request);
+  
+  if (!workshop) {
+    throw new Response("Workshop not found", { status: 404 });
+  }
+  
+  return json({ workshop });
+}
+
+export default function WorkshopDetailPage() {
+  const { workshop } = useLoaderData<typeof loader>();
+  
+  return (
+    <div>
+      <h1>{workshop.name}</h1>
+      <p>{workshop.description}</p>
+      <p>Difficulty: {workshop.difficulty}</p>
+      <p>Instructor: {workshop.instructor.name}</p>
+      <p>Lessons: {workshop.lessons.length}</p>
+    </div>
+  );
+}
+```
+
+### Enrolling in a Workshop
+
+```typescript
+import { userJoinedWorkshop } from "~/lib/models/workshop.server";
+import { requireAuth } from "~/lib/services/auth.server";
+
+export async function action({ params, request }: ActionFunctionArgs) {
+  await requireAuth(request);
+  
+  const result = await userJoinedWorkshop(params.slug, request);
+  
+  if (!result?.message) {
+    return json(
+      { error: "Could not join workshop" },
+      { status: 400 }
+    );
+  }
+  
+  return json({ success: true, message: result.message });
+}
+```

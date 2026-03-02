@@ -1,0 +1,484 @@
+---
+title: 'UI Components'
+description: 'Complete reference for reusable UI components in the Codante.io component library'
+---
+
+The UI component library provides reusable, accessible components built on Radix UI primitives with custom styling using class-variance-authority and TailwindCSS.
+
+## Core Components
+
+### Button
+
+Versatile button component with multiple variants and sizes.
+
+<ParamField path="variant" type="string" default="default">
+  Visual style variant:
+  - `default` - Brand colored button
+  - `destructive` - Red colored for dangerous actions
+  - `outline` - Bordered button with background
+  - `outline-ghost` - Bordered button without background
+  - `secondary` - Secondary background color
+  - `ghost` - Transparent background
+  - `link` - Underlined text style
+  - `pro` - Amber gradient for PRO features
+  - `register` - Background with grainy texture
+</ParamField>
+
+<ParamField path="size" type="string" default="default">
+  Button size:
+  - `default` - h-10 px-4 py-2
+  - `sm` - h-9 px-3
+  - `lg` - h-11 px-8
+  - `xl` - h-14 px-10
+  - `icon` - h-10 w-10 (square)
+</ParamField>
+
+<ParamField path="asChild" type="boolean" default="false">
+  Render as a child component using Radix UI Slot
+</ParamField>
+
+```tsx
+import { Button } from "~/components/ui/button";
+
+// Basic usage
+<Button>Click me</Button>
+
+// With variants
+<Button variant="destructive" size="lg">
+  Delete Account
+</Button>
+
+// As child (renders as link)
+<Button asChild>
+  <Link to="/profile">Go to Profile</Link>
+</Button>
+
+// PRO button
+<Button variant="pro">Upgrade to PRO</Button>
+```
+
+### Input
+
+Standard form input component with dark mode support.
+
+<ParamField path="type" type="string">
+  HTML input type (text, email, password, etc.)
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional CSS classes
+</ParamField>
+
+```tsx
+import { Input } from "~/components/ui/input";
+
+<Input 
+  type="email" 
+  placeholder="Enter your email"
+  className="max-w-md"
+/>
+```
+
+### Label
+
+Accessible form label component.
+
+```tsx
+import { Label } from "~/components/ui/label";
+import { Input } from "~/components/ui/input";
+
+<div>
+  <Label htmlFor="email">Email Address</Label>
+  <Input id="email" type="email" />
+</div>
+```
+
+## Card Components
+
+### Card
+
+Flexible card component with multiple border and hover variants.
+
+<ParamField path="border" type="string" default="default">
+  Border style:
+  - `default` - Standard border with shadow
+  - `bright` - Brighter border and shadow
+  - `dull` - More subtle border and shadow
+  - `brand` - Brand colored border
+  - `brand-l` - Left border accent in brand color
+  - `none` - No border
+</ParamField>
+
+<ParamField path="hover" type="string" default="default">
+  Hover effect:
+  - `default` - No hover effect
+  - `brand-light` - Light brand color on hover
+  - `brand` - Brand color on hover
+</ParamField>
+
+<ParamField path="rounded" type="string" default="default">
+  Border radius:
+  - `default` - rounded-lg
+  - `2xl` - rounded-2xl
+</ParamField>
+
+<ParamField path="asChild" type="boolean" default="false">
+  Render as child component
+</ParamField>
+
+<ParamField path="as" type="string" default="div">
+  HTML element to render as
+</ParamField>
+
+```tsx
+import { 
+  Card, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription, 
+  CardContent, 
+  CardFooter 
+} from "~/components/ui/cards/card";
+
+<Card border="brand-l" hover="brand">
+  <CardHeader>
+    <CardTitle>Workshop Title</CardTitle>
+    <CardDescription>Learn React fundamentals</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <p>This workshop covers essential React concepts...</p>
+  </CardContent>
+  <CardFooter>
+    <Button>Enroll Now</Button>
+  </CardFooter>
+</Card>
+```
+
+### MovingBorderCard
+
+Card with animated gradient border effect.
+
+<ParamField path="movingBorderColor" type="string" default="blue">
+  Gradient color:
+  - `blue` - Blue gradient
+  - `pro` - Amber gradient (for PRO features)
+</ParamField>
+
+```tsx
+import { MovingBorderCard } from "~/components/ui/cards/card";
+
+<MovingBorderCard 
+  movingBorderColor="pro" 
+  rounded="2xl"
+>
+  <CardContent>
+    PRO Feature Content
+  </CardContent>
+</MovingBorderCard>
+```
+
+## Dialog Components
+
+### Dialog
+
+Modal dialog built on Radix UI Dialog primitive.
+
+```tsx
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "~/components/ui/dialog";
+
+<Dialog>
+  <DialogTrigger asChild>
+    <Button>Open Dialog</Button>
+  </DialogTrigger>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Confirm Action</DialogTitle>
+      <DialogDescription>
+        Are you sure you want to proceed?
+      </DialogDescription>
+    </DialogHeader>
+    <DialogFooter>
+      <Button variant="outline">Cancel</Button>
+      <Button>Confirm</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+```
+
+## Select Components
+
+Custom select dropdown built on Radix UI Select.
+
+```tsx
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+  SelectGroup,
+  SelectLabel,
+} from "~/components/ui/select";
+
+<Select>
+  <SelectTrigger className="w-[180px]">
+    <SelectValue placeholder="Select a technology" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectGroup>
+      <SelectLabel>Frontend</SelectLabel>
+      <SelectItem value="react">React</SelectItem>
+      <SelectItem value="nextjs">Next.js</SelectItem>
+    </SelectGroup>
+    <SelectGroup>
+      <SelectLabel>Backend</SelectLabel>
+      <SelectItem value="laravel">Laravel</SelectItem>
+      <SelectItem value="nodejs">Node.js</SelectItem>
+    </SelectGroup>
+  </SelectContent>
+</Select>
+```
+
+## Toast Notifications
+
+### Toast
+
+Notification toasts built on Radix UI Toast.
+
+<ParamField path="variant" type="string" default="default">
+  - `default` - Standard notification
+  - `destructive` - Error notification
+</ParamField>
+
+```tsx
+import {
+  Toast,
+  ToastProvider,
+  ToastViewport,
+  ToastTitle,
+  ToastDescription,
+} from "~/components/ui/toast";
+
+// In your root layout
+<ToastProvider>
+  <YourApp />
+  <ToastViewport />
+</ToastProvider>
+
+// Using with react-hot-toast (recommended)
+import toast from "react-hot-toast";
+
+toast.success("Comentário enviado!");
+toast.error("Erro ao enviar comentário");
+toast.loading("Enviando...");
+```
+
+## Dropdown Menu
+
+Contextual menu component.
+
+```tsx
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "~/components/ui/dropdown-menu";
+
+<DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <Button variant="ghost">Options</Button>
+  </DropdownMenuTrigger>
+  <DropdownMenuContent>
+    <DropdownMenuItem>Edit</DropdownMenuItem>
+    <DropdownMenuItem>Duplicate</DropdownMenuItem>
+    <DropdownMenuSeparator />
+    <DropdownMenuItem className="text-red-600">
+      Delete
+    </DropdownMenuItem>
+  </DropdownMenuContent>
+</DropdownMenu>
+```
+
+## Utility Components
+
+### Tooltip
+
+Tooltip wrapper component built on Radix UI Tooltip.
+
+<ParamField path="text" type="string" required>
+  Tooltip content text
+</ParamField>
+
+<ParamField path="side" type="string" default="right">
+  Position: `left`, `right`, `top`, `bottom`
+</ParamField>
+
+<ParamField path="cursor" type="string" default="cursor-pointer">
+  CSS cursor class
+</ParamField>
+
+<ParamField path="padding" type="string">
+  Custom padding classes
+</ParamField>
+
+<ParamField path="bgColor" type="string">
+  Custom background color classes
+</ParamField>
+
+<ParamField path="textColor" type="string">
+  Custom text color classes
+</ParamField>
+
+<ParamField path="arrowColor" type="string">
+  Custom arrow color classes
+</ParamField>
+
+```tsx
+import TooltipWrapper from "~/components/ui/tooltip";
+
+<TooltipWrapper text="Click to edit" side="top">
+  <Button variant="ghost" size="icon">
+    <EditIcon />
+  </Button>
+</TooltipWrapper>
+```
+
+### Skeleton
+
+Loading skeleton component.
+
+```tsx
+import { Skeleton } from "~/components/ui/skeleton";
+
+<div className="space-y-2">
+  <Skeleton className="h-4 w-full" />
+  <Skeleton className="h-4 w-3/4" />
+  <Skeleton className="h-32 w-full" />
+</div>
+```
+
+### Chip
+
+Small label/badge component.
+
+<ParamField path="text" type="string" required>
+  Chip text content
+</ParamField>
+
+<ParamField path="type" type="string" default="default">
+  - `default` - Blue brand color
+  - `free` - Green color
+  - `unlisted` - Red color
+</ParamField>
+
+<ParamField path="className" type="string">
+  Additional CSS classes
+</ParamField>
+
+```tsx
+import Chip from "~/components/ui/chip";
+
+<div className="relative">
+  <img src="/workshop.jpg" />
+  <Chip text="GRATUITO" type="free" />
+</div>
+```
+
+### UserAvatar
+
+User avatar component with badge support.
+
+<ParamField path="avatar" type="UserAvatar" required>
+  User avatar object with `avatar_url` and optional `badge` ("pro" or "team")
+</ParamField>
+
+<ParamField path="className" type="string" default="w-7 h-7 m-[2px]">
+  Size and spacing classes
+</ParamField>
+
+<ParamField path="showTooltip" type="boolean" default="true">
+  Show tooltip on hover for badge
+</ParamField>
+
+<ParamField path="cursor" type="string" default="cursor-default">
+  Cursor style
+</ParamField>
+
+```tsx
+import UserAvatar from "~/components/ui/user-avatar";
+
+<UserAvatar 
+  avatar={{
+    avatar_url: user.avatar_url,
+    badge: user.is_pro ? "pro" : null
+  }}
+  className="w-10 h-10"
+  showTooltip={true}
+/>
+```
+
+## Content Components
+
+### MarkdownRenderer
+
+Renders markdown content with syntax highlighting and custom alerts.
+
+<ParamField path="markdown" type="string" required>
+  Markdown content to render
+</ParamField>
+
+<ParamField path="wrapperClasses" type="string">
+  Additional wrapper CSS classes
+</ParamField>
+
+<ParamField path="fontSize" type="'small' | undefined">
+  Font size variant
+</ParamField>
+
+<ParamField path="prose" type="boolean" default="true">
+  Apply prose typography styles
+</ParamField>
+
+```tsx
+import MarkdownRenderer from "~/components/ui/markdown-renderer";
+
+const content = `
+# Título
+
+Algum **texto** com _formatação_.
+
+> [!Tip]
+> Esta é uma dica útil!
+
+> [!Warning]
+> Cuidado com esta ação.
+
+\`\`\`javascript
+const hello = "world";
+console.log(hello);
+\`\`\`
+`;
+
+<MarkdownRenderer 
+  markdown={content}
+  fontSize="small"
+  prose={true}
+/>
+```
+
+**Supported Alert Types:**
+- `[!Tip]` - Green tip alert with bulb icon
+- `[!Note]` / `[!Information]` - Blue info alert
+- `[!Important]` - Purple important alert
+- `[!Warning]` - Yellow warning alert
+- `[!Caution]` - Red caution alert

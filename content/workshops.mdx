@@ -1,0 +1,358 @@
+---
+title: "Workshops"
+description: "Managing workshop content on Codante.io"
+---
+
+Workshops are video-based learning content, typically taught by instructors and organized into lessons. They can be standalone educational content or paired with challenges.
+
+## Workshop Data Structure
+
+The `Workshop` type represents the complete workshop object:
+
+### Core Properties
+
+<ParamField path="id" type="string | number" required>
+  Unique identifier for the workshop
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Display name of the workshop
+</ParamField>
+
+<ParamField path="slug" type="string" required>
+  URL-friendly identifier used in routing (e.g., `/workshops/react-hooks`)
+</ParamField>
+
+<ParamField path="status" type="enum" required>
+  Publication status: `"draft"`, `"published"`, `"soon"`, `"archived"`, or `"streaming"`
+</ParamField>
+
+<ParamField path="short_description" type="string" required>
+  Brief description shown in cards and previews
+</ParamField>
+
+<ParamField path="description" type="string" required>
+  Full description of the workshop content and objectives
+</ParamField>
+
+### Media Content
+
+<ParamField path="image_url" type="string">
+  Workshop thumbnail or featured image
+</ParamField>
+
+<ParamField path="video_url" type="string">
+  Introduction or preview video URL
+</ParamField>
+
+<ParamField path="streaming_url" type="string | null">
+  Live streaming URL when status is `"streaming"`
+</ParamField>
+
+### Metadata
+
+<ParamField path="difficulty" type="number" required>
+  Difficulty level: `1` (beginner), `2` (intermediate), or `3` (advanced)
+</ParamField>
+
+<ParamField path="duration_in_seconds" type="number" required>
+  Total duration of all workshop lessons in seconds
+</ParamField>
+
+<ParamField path="published_at" type="string">
+  ISO date string of publication date
+</ParamField>
+
+<ParamField path="is_standalone" type="boolean" required>
+  Whether the workshop is standalone content (true) or part of a challenge solution (false)
+</ParamField>
+
+<ParamField path="is_premium" type="boolean">
+  Whether the workshop requires a premium subscription
+</ParamField>
+
+### Instructor
+
+<ParamField path="instructor" type="Instructor" required>
+  Workshop instructor information:
+  - `id`: Instructor unique ID
+  - `name`: Instructor name
+  - `company`: Company or affiliation
+  - `avatar_url`: Profile image URL
+</ParamField>
+
+### Lesson Organization
+
+<ParamField path="lesson_sections" type="array">
+  Optional array of section objects organizing lessons:
+  - `name`: Section display name
+  - `lesson_ids`: Array of lesson IDs in this section
+</ParamField>
+
+<ParamField path="lessons" type="SidebarLesson[]" required>
+  Array of lesson objects included in the workshop
+</ParamField>
+
+<ParamField path="first_unwatched_lesson" type="SidebarLesson | null" required>
+  Next lesson the user should watch (null if all watched or not enrolled)
+</ParamField>
+
+### Resources
+
+<ParamField path="resources" type="array" required>
+  Array of resource objects:
+  - `name`: Resource display name
+  - `type`: Resource type identifier
+  - `url`: Resource URL
+</ParamField>
+
+### Tags
+
+<ParamField path="tags" type="Tag[]" required>
+  Array of technology and topic tags
+</ParamField>
+
+### Relationships
+
+<ParamField path="challenge" type="Challenge">
+  Associated challenge when workshop serves as a solution
+</ParamField>
+
+<ParamField path="pivot" type="TrackablePivot">
+  Track relationship data when workshop is part of a learning track
+</ParamField>
+
+### User Progress
+
+<ParamField path="workshop_user" type="WorkshopUser" required>
+  User-specific workshop data:
+  - `id`: User-workshop relationship ID
+  - `workshop_id`: Workshop ID
+  - `user_id`: User ID
+  - `status`: `"in-progress"` or `"completed"`
+  - `completed_at`: ISO date string of completion
+  - `created_at`: ISO date string of enrollment
+  - `updated_at`: ISO date string of last update
+  - `certificate`: Certificate object if available
+</ParamField>
+
+<ParamField path="completed" type="boolean">
+  Quick reference for completion status
+</ParamField>
+
+## Workshop Card Type
+
+The `WorkshopCard` type is used in workshop listings:
+
+```typescript
+type WorkshopCard = {
+  id: string;
+  name: string;
+  slug: string;
+  video_url?: string;
+  duration_in_seconds: number;
+  status: string;
+  is_standalone: boolean;
+  is_premium: boolean;
+  lessons_count: number;
+  instructor: {
+    id: number;
+    name: string;
+    company: string;
+    avatar_url: string;
+  };
+  published_at?: string;
+  streaming_url?: string | null;
+  pivot?: {
+    status: string;
+    completed_at: string;
+    started_at: string;
+    percentage_completed: number;
+  };
+};
+```
+
+<Note>
+  The `WorkshopCard` includes a `pivot` object when the workshop is part of a track, showing progress tracking.
+</Note>
+
+## API Functions
+
+### Fetching Workshops
+
+<Steps>
+  <Step title="Get All Workshops">
+    Retrieve workshops with optional technology filter:
+    
+    ```typescript
+    // All workshops
+    const workshops = await getWorkshops({ tech: "" });
+    
+    // Filter by technology
+    const reactWorkshops = await getWorkshops({ tech: "react" });
+    ```
+    
+    Returns an array of `WorkshopCard` objects.
+  </Step>
+
+  <Step title="Get Single Workshop">
+    Fetch a specific workshop by slug:
+    
+    ```typescript
+    const workshop = await getWorkshop("react-hooks", request);
+    ```
+    
+    Returns a complete `Workshop` object or `null` if not found.
+  </Step>
+</Steps>
+
+### User Actions
+
+<Steps>
+  <Step title="Join Workshop">
+    Enroll a user in a workshop:
+    
+    ```typescript
+    const result = await userJoinedWorkshop("react-hooks", request);
+    // Returns: { message?: string }
+    ```
+    
+    This creates a `WorkshopUser` record and tracks enrollment.
+  </Step>
+</Steps>
+
+## Workshop Status Types
+
+Workshops can have different status values affecting their visibility:
+
+<Steps>
+  <Step title="draft">
+    Workshop is in development and not publicly visible
+  </Step>
+
+  <Step title="published">
+    Workshop is live and available to users
+  </Step>
+
+  <Step title="soon">
+    Workshop is announced but content not yet available
+  </Step>
+
+  <Step title="archived">
+    Workshop is hidden from main listings but still accessible via direct link
+  </Step>
+
+  <Step title="streaming">
+    Workshop is currently live streaming (uses `streaming_url`)
+  </Step>
+</Steps>
+
+## Workshop vs Challenge Solutions
+
+Workshops serve two distinct purposes:
+
+<Steps>
+  <Step title="Standalone Workshops">
+    Independent educational content with `is_standalone: true`
+    
+    - Listed in `/workshops` section
+    - Self-contained learning material
+    - May have associated certificate
+  </Step>
+
+  <Step title="Challenge Solutions">
+    Workshops paired with challenges via `challenge` relationship
+    
+    - `is_standalone: false`
+    - Provides video solution to a challenge
+    - Published after challenge solution release date
+    - Linked from challenge detail page
+  </Step>
+</Steps>
+
+<Info>
+  A workshop can have a `challenge` relationship even when `is_standalone: true`, serving both as standalone content and a challenge solution.
+</Info>
+
+## Route Structure
+
+Workshops are rendered through:
+
+- **Listing**: `/_layout-app/_workshops/workshops/index.tsx`
+- **Detail**: `/_layout-app/_workshops/workshops_.$slug/index.tsx`
+- **Player**: `/_layout-raw/_player/` (minimal layout for video playback)
+
+## Workshop User Tracking
+
+The `WorkshopUser` type tracks individual user progress:
+
+```typescript
+type WorkshopUser = {
+  id: number;
+  workshop_id: number;
+  user_id: number;
+  status: "in-progress" | "completed";
+  completed_at: string;
+  created_at: string;
+  updated_at: string;
+  certificate: Certificate;
+};
+```
+
+<Steps>
+  <Step title="Enrollment">
+    Created when user calls `userJoinedWorkshop()`
+    - Initial status: `"in-progress"`
+    - Records `created_at` timestamp
+  </Step>
+
+  <Step title="Progress Tracking">
+    Updated as user completes lessons
+    - Lesson completion tracked separately
+    - `updated_at` reflects latest activity
+  </Step>
+
+  <Step title="Completion">
+    Status changes to `"completed"` when all lessons finished
+    - `completed_at` timestamp recorded
+    - Certificate may be generated
+  </Step>
+</Steps>
+
+## Lesson Sections
+
+Workshops organize lessons into optional sections:
+
+```typescript
+lesson_sections: [
+  {
+    name: "Introduction",
+    lesson_ids: [1, 2, 3]
+  },
+  {
+    name: "Advanced Concepts",
+    lesson_ids: [4, 5, 6, 7]
+  }
+]
+```
+
+<Note>
+  If `lesson_sections` is undefined or empty, lessons are displayed in a single flat list.
+</Note>
+
+## Related Types
+
+### SidebarLesson
+Detailed lesson information used in workshop player sidebar.
+
+### Instructor
+Instructor profile including name, company, and avatar.
+
+### Tag
+Technology and topic tags for categorization.
+
+### Certificate
+Certificate data awarded upon workshop completion.
+
+### TrackablePivot
+Relationship data when workshop is part of a learning track.

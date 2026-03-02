@@ -1,0 +1,192 @@
+---
+title: 'Deployment Overview'
+description: 'Learn about deployment strategies and options for Codante.io'
+---
+
+## Overview
+
+Codante.io is a React Router v7 application that runs on Node.js. This guide covers deployment strategies, build processes, and hosting options for production environments.
+
+## Architecture
+
+The application uses a modern SSR (Server-Side Rendering) architecture:
+
+- **Framework**: React Router v7 (formerly Remix)
+- **Runtime**: Node.js >= 20
+- **Build Tool**: Vite
+- **Package Manager**: npm
+- **Server**: Built-in React Router server (`@react-router/serve`)
+
+## Build Process
+
+<Steps>
+  <Step title="Install Dependencies">
+    Install all required packages:
+    
+    ```bash
+    npm install
+    ```
+  </Step>
+
+  <Step title="Type Checking">
+    Run type checking to ensure code quality:
+    
+    ```bash
+    npm run typecheck
+    ```
+    
+    This command generates route types and runs TypeScript compiler.
+  </Step>
+
+  <Step title="Build for Production">
+    Create an optimized production build:
+    
+    ```bash
+    npm run build
+    ```
+    
+    This generates:
+    - `build/` - Server-side code
+    - `public/build/` - Client-side assets
+  </Step>
+</Steps>
+
+## Build Outputs
+
+The production build creates two main directories:
+
+<ParamField path="build/" type="directory">
+  Contains the server-side compiled code, including:
+  - `build/server/index.js` - Main server entry point
+  - Route handlers and server functions
+  - SSR rendering code
+</ParamField>
+
+<ParamField path="public/build/" type="directory">
+  Contains client-side assets:
+  - JavaScript bundles (code-split by route)
+  - CSS stylesheets
+  - Asset manifests
+</ParamField>
+
+## Deployment Strategies
+
+### Traditional Server Deployment
+
+Deploy to any Node.js hosting provider:
+
+```bash
+# Build the application
+npm run build
+
+# Start the production server
+npm start
+```
+
+<Note>
+The `npm start` command uses `dotenv-cli` to load environment variables from `.env.production` and serves the application using `@react-router/serve`.
+</Note>
+
+### Containerized Deployment
+
+Deploy using Docker or container orchestration platforms:
+
+```dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --production=false
+
+COPY . .
+RUN npm run build
+
+ENV NODE_ENV=production
+CMD ["npm", "start"]
+```
+
+### Platform-Specific Deployment
+
+React Router v7 applications can be deployed to various platforms:
+
+- **Node.js Hosts**: Any VPS, DigitalOcean, AWS EC2
+- **Container Platforms**: Docker, Kubernetes
+- **Serverless**: With appropriate adapters
+- **Traditional Hosts**: Any platform supporting Node.js >= 20
+
+<Warning>
+Ensure your hosting platform supports Node.js version 20 or higher, as specified in `package.json` engines.
+</Warning>
+
+## Server Configuration
+
+### Port Configuration
+
+The development server runs on port 3000 by default (configured in `vite.config.ts`):
+
+```typescript
+server: {
+  port: 3000,
+}
+```
+
+### Proxy Configuration
+
+The application includes a proxy configuration for API requests:
+
+```json
+"proxy": "http://127.0.0.1:8000"
+```
+
+This proxies backend API requests during development.
+
+## Performance Optimization
+
+The build process includes several optimizations:
+
+- **Code Splitting**: Route-based automatic code splitting
+- **SSR**: Server-side rendering for faster initial page loads
+- **Asset Optimization**: Minification and bundling via Vite
+- **Tree Shaking**: Removes unused code from bundles
+
+## Pre-Deployment Checklist
+
+Before deploying to production:
+
+<Steps>
+  <Step title="Environment Variables">
+    Configure all required environment variables (see [Environment Configuration](/deployment/environment))
+  </Step>
+
+  <Step title="Code Quality">
+    Run linting and type checking:
+    ```bash
+    npm run lint
+    npm run typecheck
+    ```
+  </Step>
+
+  <Step title="Build Test">
+    Test the production build locally:
+    ```bash
+    npm run build
+    npm start
+    ```
+  </Step>
+
+  <Step title="Environment File">
+    Ensure `.env.production` contains all required variables
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Variables" icon="gear" href="/deployment/environment">
+    Configure environment variables and secrets
+  </Card>
+  <Card title="Production Deployment" icon="rocket" href="/deployment/production">
+    Step-by-step production deployment guide
+  </Card>
+</CardGroup>

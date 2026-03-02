@@ -1,0 +1,599 @@
+---
+title: Challenge
+description: Challenge model types and functions for managing mini-projects on Codante.io
+---
+
+## Overview
+
+The Challenge model handles all functionality related to mini-projects ("mini-projetos") on Codante.io, including challenge data, user participation, submissions, and progress tracking.
+
+## Type Definitions
+
+### ChallengeDifficulty
+
+Difficulty levels for challenges.
+
+```typescript
+type ChallengeDifficulty = "newbie" | "intermediate" | "advanced";
+```
+
+### ChallengeEstimatedEffort
+
+Estimated time required to complete a challenge.
+
+```typescript
+type ChallengeEstimatedEffort = "1_day" | "2_days" | "1_week";
+```
+
+### ChallengeCategory
+
+Challenge category classification.
+
+```typescript
+type ChallengeCategory = "frontend" | "fullstack";
+```
+
+### Challenge
+
+Complete challenge object with all details.
+
+<Expandable title="Challenge Properties">
+<ResponseField name="id" type="string" required>
+  Unique identifier for the challenge
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Challenge name
+</ResponseField>
+
+<ResponseField name="slug" type="string" required>
+  URL-friendly slug
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Challenge status: `"draft"`, `"published"`, `"soon"`, or `"archived"`
+</ResponseField>
+
+<ResponseField name="short_description" type="string" required>
+  Brief description of the challenge
+</ResponseField>
+
+<ResponseField name="repository_name" type="string" required>
+  GitHub repository name
+</ResponseField>
+
+<ResponseField name="stars" type="number">
+  GitHub repository stars count
+</ResponseField>
+
+<ResponseField name="forks" type="number">
+  GitHub repository forks count
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Full challenge description
+</ResponseField>
+
+<ResponseField name="image_url" type="string" required>
+  Challenge cover image URL
+</ResponseField>
+
+<ResponseField name="video_url" type="string">
+  Introduction video URL
+</ResponseField>
+
+<ResponseField name="difficulty" type="ChallengeDifficulty" required>
+  Challenge difficulty level
+</ResponseField>
+
+<ResponseField name="estimated_effort" type="ChallengeEstimatedEffort" required>
+  Estimated completion time
+</ResponseField>
+
+<ResponseField name="category" type="ChallengeCategory" required>
+  Challenge category
+</ResponseField>
+
+<ResponseField name="main_technology" type="Tag" required>
+  Primary technology tag
+</ResponseField>
+
+<ResponseField name="is_premium" type="boolean" required>
+  Whether challenge requires PRO subscription
+</ResponseField>
+
+<ResponseField name="duration_in_minutes" type="number" required>
+  Total duration in minutes
+</ResponseField>
+
+<ResponseField name="enrolled_users_count" type="number" required>
+  Number of enrolled users
+</ResponseField>
+
+<ResponseField name="has_solution" type="boolean" required>
+  Whether solution is available
+</ResponseField>
+
+<ResponseField name="tags" type="Tag[]" required>
+  Associated technology tags
+</ResponseField>
+
+<ResponseField name="workshop" type="Workshop">
+  Related workshop if available
+</ResponseField>
+
+<ResponseField name="users" type="Array<{avatar_url: string}>">
+  Array of user avatars
+</ResponseField>
+
+<ResponseField name="pivot" type="TrackablePivot">
+  Track relationship data if challenge is part of a track
+</ResponseField>
+
+<ResponseField name="completed" type="boolean">
+  Whether current user completed the challenge
+</ResponseField>
+
+<ResponseField name="current_user_is_enrolled" type="boolean" required>
+  Whether current user is enrolled
+</ResponseField>
+
+<ResponseField name="current_user_status" type="string" required>
+  User progress status: `null`, `"not-joined"`, `"joined"`, `"forked"`, `"joined-discord"`, `"submitted"`, or `"completed"`
+</ResponseField>
+
+<ResponseField name="resources" type="Array" required>
+  Challenge resources (links, files, etc.)
+</ResponseField>
+
+<ResponseField name="weekly_featured_start_date" type="string | null" required>
+  Date when challenge was featured weekly
+</ResponseField>
+
+<ResponseField name="solution_publish_date" type="string | null" required>
+  Date when solution was published
+</ResponseField>
+
+<ResponseField name="is_weekly_featured" type="boolean">
+  Whether challenge is currently featured
+</ResponseField>
+
+<ResponseField name="solution" type="object" required>
+  Solution lessons and structure
+</ResponseField>
+</Expandable>
+
+### ChallengeCard
+
+Lightweight challenge object for listing pages.
+
+<Expandable title="ChallengeCard Properties">
+<ResponseField name="id" type="string" required>
+  Unique identifier
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Challenge name
+</ResponseField>
+
+<ResponseField name="slug" type="string" required>
+  URL-friendly slug
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Challenge status
+</ResponseField>
+
+<ResponseField name="short_description" type="string" required>
+  Brief description
+</ResponseField>
+
+<ResponseField name="image_url" type="string" required>
+  Cover image URL
+</ResponseField>
+
+<ResponseField name="difficulty" type="ChallengeDifficulty" required>
+  Difficulty level
+</ResponseField>
+
+<ResponseField name="estimated_effort" type="ChallengeEstimatedEffort" required>
+  Estimated completion time
+</ResponseField>
+
+<ResponseField name="category" type="ChallengeCategory" required>
+  Challenge category
+</ResponseField>
+
+<ResponseField name="main_technology" type="Tag" required>
+  Primary technology
+</ResponseField>
+
+<ResponseField name="is_premium" type="boolean" required>
+  Requires PRO subscription
+</ResponseField>
+
+<ResponseField name="tags" type="Tag[]" required>
+  Technology tags
+</ResponseField>
+
+<ResponseField name="pivot" type="TrackablePivot">
+  Track relationship data
+</ResponseField>
+
+<ResponseField name="has_solution" type="boolean" required>
+  Solution availability
+</ResponseField>
+
+<ResponseField name="avatars" type="UserAvatar[]" required>
+  User avatars
+</ResponseField>
+
+<ResponseField name="enrolled_users_count" type="number" required>
+  Enrollment count
+</ResponseField>
+
+<ResponseField name="current_user_is_enrolled" type="boolean" required>
+  User enrollment status
+</ResponseField>
+
+<ResponseField name="weekly_featured_start_date" type="string | null" required>
+  Featured date
+</ResponseField>
+
+<ResponseField name="solution_publish_date" type="string | null" required>
+  Solution publish date
+</ResponseField>
+
+<ResponseField name="is_weekly_featured" type="boolean" required>
+  Featured status
+</ResponseField>
+</Expandable>
+
+### ChallengeSummary
+
+Minimal challenge data for references.
+
+```typescript
+type ChallengeSummary = {
+  id: string;
+  name: string;
+  slug: string;
+  short_description: string;
+  image_url: string;
+  status: "draft" | "published" | "soon" | "archived";
+  difficulty: ChallengeDifficulty;
+};
+```
+
+### ChallengeParticipants
+
+Participants information.
+
+```typescript
+type ChallengeParticipants = {
+  count: number;
+  avatars: UserAvatar[];
+};
+```
+
+### ChallengesByTechnology
+
+Challenges grouped by technology.
+
+```typescript
+type ChallengesByTechnology = {
+  technologies: {
+    name: string;
+    image_url: string;
+    challenges: ChallengeCard[];
+  }[];
+  filters: {
+    technologies: Tag[];
+  };
+};
+```
+
+## Functions
+
+### getChallenges
+
+Fetches a list of challenges with optional filters.
+
+<ParamField path="filters" type="object">
+  Filter options for challenges
+  <Expandable title="Filter Properties">
+    <ResponseField name="tecnologia" type="string">Technology filter</ResponseField>
+    <ResponseField name="dificuldade" type="string">Difficulty filter</ResponseField>
+    <ResponseField name="q" type="string">Search query</ResponseField>
+    <ResponseField name="gratuito" type="string">Free only filter</ResponseField>
+    <ResponseField name="ordenacao" type="string">Sort order</ResponseField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="request" type="Request" required>
+  Request object for authentication
+</ParamField>
+
+```typescript
+async function getChallenges({
+  filters,
+  request,
+}: {
+  filters: {
+    tecnologia?: string;
+    dificuldade?: string;
+    q?: string;
+    gratuito?: string;
+    ordenacao?: string;
+  };
+  request: Request;
+}): Promise<{
+  challenges: ChallengeCard[];
+  featuredChallenge: ChallengeCard;
+  totalChallenges: number;
+}>;
+```
+
+### getChallenge
+
+Fetches a single challenge by slug.
+
+<ParamField path="slug" type="string" required>
+  Challenge slug identifier
+</ParamField>
+
+<ParamField path="request" type="Request" required>
+  Request object for authentication
+</ParamField>
+
+```typescript
+async function getChallenge(
+  slug: string,
+  request: Request,
+): Promise<Challenge>;
+```
+
+### getChallengeParticipants
+
+Fetches participants for a challenge.
+
+<ParamField path="slug" type="string" required>
+  Challenge slug
+</ParamField>
+
+<ParamField path="request" type="Request" required>
+  Request object
+</ParamField>
+
+```typescript
+async function getChallengeParticipants(
+  slug: string,
+  request: Request,
+): Promise<ChallengeParticipants>;
+```
+
+### joinChallenge
+
+Enrolls the current user in a challenge.
+
+<ParamField path="slug" type="string" required>
+  Challenge slug
+</ParamField>
+
+<ParamField path="request" type="Request" required>
+  Request object
+</ParamField>
+
+```typescript
+async function joinChallenge({
+  slug,
+  request,
+}: {
+  slug: string;
+  request: Request;
+}): Promise<{ success?: string; error?: string }>;
+```
+
+### userJoinedChallenge
+
+Checks if user has joined a challenge and returns their data.
+
+```typescript
+async function userJoinedChallenge(
+  slug: string,
+  request: Request,
+): Promise<ChallengeUser>;
+```
+
+### updateChallengeUser
+
+Updates user's challenge progress.
+
+<ParamField path="slug" type="string" required>
+  Challenge slug
+</ParamField>
+
+<ParamField path="body" type="object" required>
+  Update data
+  <Expandable title="Body Properties">
+    <ResponseField name="fork_url" type="string">Fork repository URL</ResponseField>
+    <ResponseField name="joined_discord" type="boolean">Discord join status</ResponseField>
+    <ResponseField name="completed" type="boolean">Completion status</ResponseField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="request" type="Request" required>
+  Request object
+</ParamField>
+
+```typescript
+async function updateChallengeUser({
+  slug,
+  body,
+  request,
+}: {
+  slug: string;
+  body: { fork_url?: string; joined_discord?: boolean; completed?: boolean };
+  request: Request;
+}): Promise<Challenge>;
+```
+
+### verifyAndUpdateForkURL
+
+Verifies that the user has forked the repository.
+
+```typescript
+async function verifyAndUpdateForkURL({
+  slug,
+  request,
+}: {
+  slug: string;
+  request: Request;
+}): Promise<{ success?: string; error?: string }>;
+```
+
+### submitChallenge
+
+Submits a challenge solution with deployment URL.
+
+<ParamField path="request" type="Request" required>
+  Request object
+</ParamField>
+
+<ParamField path="slug" type="string" required>
+  Challenge slug
+</ParamField>
+
+<ParamField path="submissionUrl" type="string" required>
+  Deployed project URL
+</ParamField>
+
+<ParamField path="metadata" type="any">
+  Additional submission metadata
+</ParamField>
+
+```typescript
+async function submitChallenge(
+  request: Request,
+  slug: string,
+  submissionUrl: string,
+  metadata?: any,
+): Promise<{ success?: string; error?: string }>;
+```
+
+### submitChallengeWithoutDeploy
+
+Submits a challenge with an image instead of deployment URL.
+
+```typescript
+async function submitChallengeWithoutDeploy(
+  request: Request,
+  slug: string,
+  submissionImage: FormDataEntryValue | null,
+): Promise<{ success?: string; error?: string }>;
+```
+
+### updateChallengeSubmission
+
+Updates an existing challenge submission.
+
+```typescript
+async function updateChallengeSubmission(
+  request: Request,
+  slug: string,
+  submissionUrl: string,
+  metadata?: any,
+): Promise<{ success?: string; error?: string }>;
+```
+
+### getChallengeUsers
+
+Fetches all user submissions for a challenge.
+
+```typescript
+async function getChallengeUsers(
+  request: Request,
+  slug: string,
+): Promise<ChallengeUser[]>;
+```
+
+### getSubmissionFromGithubUser
+
+Fetches a specific user's submission by their GitHub username.
+
+<ParamField path="slug" type="string" required>
+  Challenge slug
+</ParamField>
+
+<ParamField path="githubUser" type="string" required>
+  GitHub username
+</ParamField>
+
+```typescript
+async function getSubmissionFromGithubUser(
+  slug: string,
+  githubUser: string,
+): Promise<{
+  challenge_name: string;
+  user_name: string;
+  submission_image_url: string;
+}>;
+```
+
+## Usage Examples
+
+### Fetching and Displaying Challenges
+
+```typescript
+import { getChallenges } from "~/lib/models/challenge.server";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const url = new URL(request.url);
+  const tech = url.searchParams.get("tecnologia") || "";
+  const difficulty = url.searchParams.get("dificuldade") || "";
+
+  const { challenges, featuredChallenge, totalChallenges } = await getChallenges({
+    filters: { tecnologia: tech, dificuldade: difficulty },
+    request,
+  });
+
+  return { challenges, featuredChallenge, totalChallenges };
+}
+```
+
+### Enrolling in a Challenge
+
+```typescript
+import { joinChallenge } from "~/lib/models/challenge.server";
+
+export async function action({ request, params }: ActionFunctionArgs) {
+  const { slug } = params;
+  const result = await joinChallenge({ slug, request });
+  
+  if (result.error) {
+    return json({ error: result.error }, { status: 400 });
+  }
+  
+  return json({ success: result.success });
+}
+```
+
+### Submitting a Challenge
+
+```typescript
+import { submitChallenge } from "~/lib/models/challenge.server";
+
+export async function action({ request, params }: ActionFunctionArgs) {
+  const formData = await request.formData();
+  const submissionUrl = formData.get("url") as string;
+  const { slug } = params;
+
+  const result = await submitChallenge(
+    request,
+    slug,
+    submissionUrl,
+  );
+
+  return json(result);
+}
+```

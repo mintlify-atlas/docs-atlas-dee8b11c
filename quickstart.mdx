@@ -1,80 +1,303 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start Guide
+description: Get your Codante.io development environment up and running in minutes with this step-by-step guide
 ---
 
-## Get started in three steps
+# Quick Start Guide
 
-Get your documentation site running locally and make your first customization.
+This guide will help you set up and run the Codante.io platform locally for development.
 
-### Step 1: Set up your local environment
+## Prerequisites
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
+Before you begin, ensure you have the following installed:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Node.js" icon="node-js">
+    **Version 20 or higher** is required. Check your version with `node --version`
+  </Card>
+  
+  <Card title="npm" icon="npm">
+    Comes bundled with Node.js. Alternatively, you can use yarn.
+  </Card>
 </CardGroup>
 
+<Warning>
+Node.js version 20 or higher is required. The application will not run on older versions.
+</Warning>
+
+## Installation
+
+Follow these steps to get your development environment running:
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the repository to your local machine:
+    
+    ```bash
+    git clone <repository-url>
+    cd <project-directory>
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install all required dependencies using npm:
+    
+    ```bash
+    npm install
+    ```
+    
+    This will install all dependencies listed in `package.json`, including:
+    - React Router v7 (`react-router`, `@react-router/node`, `@react-router/serve`)
+    - React 19.2+
+    - TailwindCSS v4
+    - Radix UI components
+    - Framer Motion for animations
+    - And many more development and runtime dependencies
+  </Step>
+
+  <Step title="Configure environment variables">
+    Create environment configuration files for your local setup. The application uses Zod schema validation for environment variables.
+    
+    <Info>
+    Environment variables are validated using Zod in `app/lib/models/environment.ts`. Required variables include:
+    </Info>
+    
+    **Required Environment Variables:**
+    
+    ```bash
+    # Core Configuration
+    SESSION_SECRET=your-session-secret
+    API_HOST=http://localhost:8000
+    BASE_URL=http://localhost:3000
+    NODE_ENV=development
+    
+    # GitHub OAuth
+    GITHUB_ID=your-github-app-id
+    GITHUB_SECRET=your-github-app-secret
+    GITHUB_CALLBACK_URL=http://localhost:3000/auth/github/callback
+    
+    # Discord OAuth
+    DISCORD_APP_CLIENT_ID=your-discord-client-id
+    DISCORD_APP_SECRET=your-discord-secret
+    
+    # reCAPTCHA
+    RECAPTCHA_SITE_KEY=your-recaptcha-site-key
+    RECAPTCHA_SECRET_KEY=your-recaptcha-secret-key
+    ```
+    
+    <Note>
+    Check `app/lib/models/environment.ts` for the complete list of environment variables and their validation schema.
+    </Note>
+  </Step>
+
+  <Step title="Start the development server">
+    Launch the development server:
+    
+    ```bash
+    npm run dev
+    ```
+    
+    This command uses `react-router dev` which starts:
+    - Development server on port **3000** (default)
+    - Hot module replacement (HMR) for instant updates
+    - Automatic rebuilding on file changes
+    
+    The application will be available at `http://localhost:3000`
+  </Step>
+
+  <Step title="Verify the installation">
+    Open your browser and navigate to `http://localhost:3000`. You should see the Codante.io landing page.
+    
+    <Info>
+    In development mode, you'll see a breakpoint indicator in the bottom-left corner showing the current Tailwind breakpoint (xs, sm, md, lg, xl, 2xl).
+    </Info>
+  </Step>
+</Steps>
+
+## Development Commands
+
+Here are the key commands you'll use during development:
+
+### Core Commands
+
+```bash
+# Start development server (port 3000)
+npm run dev
+
+# Build for production
+npm run build
+
+# Run production build
+npm start
+```
+
+### Code Quality Commands
+
+```bash
+# Type checking + route generation
+npm run typecheck
+
+# ESLint check
+npm run lint
+
+# ESLint with auto-fix
+npm run lint-fix
+```
+
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+The project uses Husky for Git hooks and lint-staged for pre-commit formatting and linting.
 </Note>
+
+## Project Structure
+
+Understanding the project structure will help you navigate the codebase:
+
+```
+app/
+├── components/
+│   ├── _layouts/        # Layout components (navbar, footer, root-layout)
+│   ├── features/        # Feature-specific components (auth, comments, reactions)
+│   └── ui/              # Reusable UI components (button, dialog, cards)
+├── lib/
+│   ├── models/          # Server-side models and types
+│   ├── services/        # Authentication, API clients
+│   ├── hooks/           # Custom React hooks
+│   └── utils/           # Utility functions
+├── routes/              # Route components and loaders
+│   ├── _layout-app/     # Main application layout
+│   ├── _layout-raw/     # Minimal layout for players
+│   ├── _landing-page/   # Landing page components
+│   └── _api/            # API routes
+├── root.tsx             # Application root component
+└── route-config.ts      # Route configuration
+```
+
+### Key Directories
+
+<CardGroup cols={2}>
+  <Card title="app/components" icon="puzzle-piece">
+    Organized into layouts, features, and reusable UI components using Radix UI primitives.
+  </Card>
+  
+  <Card title="app/lib" icon="book">
+    Contains models, services, hooks, and utilities. Server-only code uses `.server.ts` extension.
+  </Card>
+  
+  <Card title="app/routes" icon="route">
+    React Router v7 routes with multiple layout patterns and route groups.
+  </Card>
+  
+  <Card title="app/root.tsx" icon="home">
+    Application root with meta tags, links, context providers, and error boundaries.
+  </Card>
+</CardGroup>
+
+## Understanding the Root Component
+
+The `app/root.tsx` file is the entry point of the application:
+
+```tsx
+export async function loader({ request }: { request: Request }) {
+  const userData = (await user({ request })) as User | null;
+
+  // Prefetch optimization
+  const headers = new Headers();
+  const purpose =
+    request.headers.get("Purpose") ||
+    request.headers.get("X-Purpose") ||
+    request.headers.get("Sec-Purpose") ||
+    request.headers.get("Sec-Fetch-Purpose") ||
+    request.headers.get("X-Moz");
+
+  if (purpose === "prefetch") {
+    headers.set("Cache-Control", "private, max-age=20");
+  }
+
+  return data(
+    {
+      user: userData,
+      ENV: {
+        BASE_URL: environment().BASE_URL,
+        NODE_ENV: environment().NODE_ENV,
+      },
+    },
+    { headers },
+  );
+}
+```
+
+This demonstrates:
+- Server-side authentication via `user()` function
+- Prefetch optimization with cache headers
+- Environment variable exposure to client
+
+## Authentication Flow
+
+The platform supports OAuth authentication with GitHub and Discord:
+
+```tsx
+// User data passed via outlet context
+const { user } = useOutletContext<{ user: User }>()
+
+// Protected routes use requireAuth() in loaders
+// Guest-only routes use requireGuest()
+// Session management with cookie-based storage
+```
+
+<Info>
+Authentication is handled server-side using `remix-auth` with GitHub and Discord strategies. See `app/lib/services/auth.server.ts` for implementation details.
+</Info>
+
+## Styling with TailwindCSS
+
+The application uses TailwindCSS v4 with a custom design system:
+
+```tsx
+import { cn } from "~/lib/utils/cn";
+
+// Use cn() utility (clsx + tailwind-merge) for conditional classes
+<div className={cn(
+  "text-gray-800 bg-white",
+  "dark:bg-gray-dark dark:text-gray-50"
+)} />
+```
+
+### Styling Conventions
+
+- **cn() utility** - Combines clsx and tailwind-merge for conditional classes
+- **Dark mode** - Via ColorModeProvider context and CSS custom properties
+- **Component variants** - Using class-variance-authority
+- **Background patterns** - Custom patterns like `bg-grainy`
+- **Responsive design** - Mobile-first with Tailwind breakpoints
+
+## Next Steps
+
+Now that you have the development environment running:
+
+<CardGroup cols={2}>
+  <Card title="Explore the Architecture" icon="sitemap" href="/architecture">
+    Learn about the routing structure, component architecture, and data patterns.
+  </Card>
+  
+  <Card title="Component Library" icon="palette" href="/components">
+    Discover the reusable UI components built with Radix UI and Framer Motion.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+### Port Already in Use
+
+If port 3000 is already in use, the development server will fail to start. Either stop the process using that port or configure a different port.
+
+### Environment Variables Missing
+
+If you see Zod validation errors, ensure all required environment variables are set correctly. Check `app/lib/models/environment.ts` for the validation schema.
+
+### Type Errors
+
+Run `npm run typecheck` to identify and fix TypeScript errors. The command also generates route types.
+
+<Warning>
+Always run type checking before committing code. The project uses Git hooks to enforce code quality standards.
+</Warning>

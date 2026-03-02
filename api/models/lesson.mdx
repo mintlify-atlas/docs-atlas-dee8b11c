@@ -1,0 +1,390 @@
+---
+title: Lesson
+description: Lesson model types and functions for managing workshop lessons and content
+---
+
+## Overview
+
+The Lesson model handles individual lessons within workshops, including video and text content, user progress tracking, and lesson completion status.
+
+## Type Definitions
+
+### Lesson
+
+Complete lesson object with all content and metadata.
+
+<Expandable title="Lesson Properties">
+<ResponseField name="id" type="number" required>
+  Unique identifier for the lesson
+</ResponseField>
+
+<ResponseField name="workshop_id" type="string" required>
+  Parent workshop identifier
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Lesson title
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Lesson description or summary
+</ResponseField>
+
+<ResponseField name="content" type="string | React.JSX.Element">
+  Lesson content (for text-based lessons)
+</ResponseField>
+
+<ResponseField name="slug" type="string" required>
+  URL-friendly slug
+</ResponseField>
+
+<ResponseField name="duration_in_seconds" type="number" required>
+  Total duration in seconds (for video lessons)
+</ResponseField>
+
+<ResponseField name="created_at" type="string" required>
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="updated_at" type="string" required>
+  Last update timestamp
+</ResponseField>
+
+<ResponseField name="video_url" type="string">
+  Video URL (for video lessons)
+</ResponseField>
+
+<ResponseField name="section" type="string">
+  Section name this lesson belongs to
+</ResponseField>
+
+<ResponseField name="thumbnail_url" type="string">
+  Video thumbnail image URL
+</ResponseField>
+
+<ResponseField name="user_completed" type="boolean">
+  Whether current user has completed this lesson
+</ResponseField>
+
+<ResponseField name="type" type="string" required>
+  Lesson type: `"video"` or `"text"`
+</ResponseField>
+
+<ResponseField name="user_can_view" type="boolean">
+  Whether current user has permission to view this lesson
+</ResponseField>
+
+<ResponseField name="available_to" type="AvailableTo" required>
+  Access level required for this lesson
+</ResponseField>
+
+<ResponseField name="comments" type="Comment[]" required>
+  Comments on this lesson
+</ResponseField>
+</Expandable>
+
+### AvailableTo
+
+Access level requirements for a lesson.
+
+```typescript
+type AvailableTo = "all" | "logged_in" | "pro";
+```
+
+<ResponseField name="all" type="string">
+  Lesson is available to everyone
+</ResponseField>
+
+<ResponseField name="logged_in" type="string">
+  Lesson requires user to be logged in
+</ResponseField>
+
+<ResponseField name="pro" type="string">
+  Lesson requires PRO subscription
+</ResponseField>
+
+## Functions
+
+### getLesson
+
+Fetches a single lesson by slug.
+
+<ParamField path="slug" type="string" required>
+  Lesson slug identifier
+</ParamField>
+
+<ParamField path="request" type="any" required>
+  Request object for authentication
+</ParamField>
+
+```typescript
+async function getLesson(
+  slug: string,
+  request: any,
+): Promise<Lesson | null>;
+```
+
+**Returns**: Lesson object or null if not found
+
+**Example**:
+```typescript
+import { getLesson } from "~/lib/models/lesson.server";
+
+export async function loader({ params, request }: LoaderFunctionArgs) {
+  const lesson = await getLesson(params.slug, request);
+  
+  if (!lesson) {
+    throw new Response("Lesson not found", { status: 404 });
+  }
+  
+  // Check if user has access to this lesson
+  if (!lesson.user_can_view) {
+    throw new Response("Forbidden", { status: 403 });
+  }
+  
+  return json({ lesson });
+}
+```
+
+### setCompleted
+
+Marks a lesson as completed or uncompleted for the current user.
+
+<ParamField path="lessonId" type="string" required>
+  Lesson identifier
+</ParamField>
+
+<ParamField path="request" type="Request" required>
+  Request object for authentication
+</ParamField>
+
+<ParamField path="markCompleted" type="boolean" default="true">
+  Whether to mark as completed (true) or uncompleted (false)
+</ParamField>
+
+```typescript
+async function setCompleted(
+  lessonId: string,
+  request: Request,
+  markCompleted = true,
+): Promise<any>;
+```
+
+**Returns**: Updated lesson data
+
+**Example**:
+```typescript
+import { setCompleted } from "~/lib/models/lesson.server";
+import { requireAuth } from "~/lib/services/auth.server";
+
+export async function action({ request }: ActionFunctionArgs) {
+  await requireAuth(request);
+  
+  const formData = await request.formData();
+  const lessonId = formData.get("lessonId") as string;
+  const completed = formData.get("completed") === "true";
+  
+  const data = await setCompleted(lessonId, request, completed);
+  
+  return json({ success: true, data });
+}
+```
+
+## Usage Examples
+
+### Lesson Player Page
+
+```typescript
+import { getLesson } from "~/lib/models/lesson.server";
+import { requireAuth } from "~/lib/services/auth.server";
+
+export async function loader({ params, request }: LoaderFunctionArgs) {
+  const user = await requireAuth(request);
+  const lesson = await getLesson(params.slug, request);
+  
+  if (!lesson) {
+    throw new Response("Lesson not found", { status: 404 });
+  }
+  
+  // Check access permissions
+  if (lesson.available_to === "pro" && !user.is_pro) {
+    throw redirect("/subscribe");
+  }
+  
+  if (lesson.available_to === "logged_in" && !user) {
+    throw redirect("/login");
+  }
+  
+  if (!lesson.user_can_view) {
+    throw new Response("You don't have access to this lesson", { status: 403 });
+  }
+  
+  return json({ lesson });
+}
+
+export default function LessonPage() {
+  const { lesson } = useLoaderData<typeof loader>();
+  
+  return (
+    <div>
+      <h1>{lesson.name}</h1>
+      {lesson.description && <p>{lesson.description}</p>}
+      
+      {lesson.type === "video" && lesson.video_url && (
+        <VideoPlayer
+          url={lesson.video_url}
+          thumbnail={lesson.thumbnail_url}
+        />
+      )}
+      
+      {lesson.type === "text" && lesson.content && (
+        <div className="prose">
+          {typeof lesson.content === "string" ? (
+            <div dangerouslySetInnerHTML={{ __html: lesson.content }} />
+          ) : (
+            lesson.content
+          )}
+        </div>
+      )}
+      
+      <div>
+        <p>Duration: {Math.floor(lesson.duration_in_seconds / 60)} minutes</p>
+        {lesson.user_completed && <span>Completed</span>}
+      </div>
+    </div>
+  );
+}
+```
+
+### Mark Lesson as Complete
+
+```typescript
+import { setCompleted } from "~/lib/models/lesson.server";
+import { useFetcher } from "react-router";
+
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData();
+  const lessonId = formData.get("lessonId") as string;
+  const completed = formData.get("completed") === "true";
+  
+  await setCompleted(lessonId, request, completed);
+  
+  return json({ success: true });
+}
+
+function LessonCompletionButton({ lesson }: { lesson: Lesson }) {
+  const fetcher = useFetcher();
+  
+  const handleToggle = () => {
+    fetcher.submit(
+      {
+        lessonId: lesson.id.toString(),
+        completed: (!lesson.user_completed).toString(),
+      },
+      { method: "post" }
+    );
+  };
+  
+  return (
+    <button onClick={handleToggle} disabled={fetcher.state !== "idle"}>
+      {lesson.user_completed ? "Mark as Incomplete" : "Mark as Complete"}
+    </button>
+  );
+}
+```
+
+### Lesson List with Progress
+
+```typescript
+import type { Lesson } from "~/lib/models/lesson.server";
+
+function LessonList({ lessons }: { lessons: Lesson[] }) {
+  const completedCount = lessons.filter((l) => l.user_completed).length;
+  const totalCount = lessons.length;
+  const progressPercentage = (completedCount / totalCount) * 100;
+  
+  return (
+    <div>
+      <div>
+        <p>Progress: {completedCount} / {totalCount}</p>
+        <div className="progress-bar">
+          <div style={{ width: `${progressPercentage}%` }} />
+        </div>
+      </div>
+      
+      {lessons.map((lesson) => (
+        <div key={lesson.id}>
+          <h3>{lesson.name}</h3>
+          <p>{Math.floor(lesson.duration_in_seconds / 60)} min</p>
+          
+          {lesson.type === "video" && <span>Video</span>}
+          {lesson.type === "text" && <span>Reading</span>}
+          
+          {lesson.user_completed && <span>Completed</span>}
+          
+          {lesson.available_to === "pro" && <span>PRO</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+### Access Control Component
+
+```typescript
+import type { Lesson, AvailableTo } from "~/lib/models/lesson.server";
+import type { User } from "~/lib/models/user.server";
+import { Link } from "react-router";
+
+function LessonAccessGate({
+  lesson,
+  user,
+  children,
+}: {
+  lesson: Lesson;
+  user: User | null;
+  children: React.ReactNode;
+}) {
+  const canAccess = () => {
+    if (lesson.available_to === "all") return true;
+    if (lesson.available_to === "logged_in" && user) return true;
+    if (lesson.available_to === "pro" && user?.is_pro) return true;
+    return false;
+  };
+  
+  if (!canAccess()) {
+    return (
+      <div>
+        <p>This lesson requires {lesson.available_to === "pro" ? "PRO" : "login"}</p>
+        {!user ? (
+          <Link to="/login">Login to access</Link>
+        ) : (
+          <Link to="/subscribe">Upgrade to PRO</Link>
+        )}
+      </div>
+    );
+  }
+  
+  return <>{children}</>;
+}
+```
+
+### Lesson Comments Section
+
+```typescript
+import type { Lesson } from "~/lib/models/lesson.server";
+
+function LessonComments({ lesson }: { lesson: Lesson }) {
+  return (
+    <div>
+      <h3>Comments ({lesson.comments.length})</h3>
+      {lesson.comments.map((comment) => (
+        <div key={comment.id}>
+          {/* Render comment */}
+        </div>
+      ))}
+    </div>
+  );
+}
+```

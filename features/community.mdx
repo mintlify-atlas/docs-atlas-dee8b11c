@@ -1,0 +1,514 @@
+---
+title: 'Community Features'
+description: 'Engage with comments, reactions, Discord integration, and collaborative learning'
+---
+
+## Overview
+
+Codeante.io provides comprehensive community features that enable developers to connect, collaborate, and learn together. Share your work, get feedback, and engage with a vibrant community of learners.
+
+<CardGroup cols={2}>
+  <Card title="Comments System" icon="comments" href="#comments">
+    Discuss solutions and share insights
+  </Card>
+  <Card title="Reactions" icon="heart" href="#reactions">
+    Show appreciation with emoji reactions
+  </Card>
+  <Card title="Discord Community" icon="discord" href="#discord-integration">
+    Join real-time discussions
+  </Card>
+  <Card title="Submission Gallery" icon="images" href="#submission-gallery">
+    Showcase your completed projects
+  </Card>
+</CardGroup>
+
+## Comments
+
+The commenting system allows threaded discussions on submissions and content.
+
+### Comment Structure
+
+```typescript
+type Comment = {
+  id: string;
+  user: User;
+  comment: string;
+  replying_to?: string;
+  commentable_id: string;
+  commentable_type: string;
+  created_at_human: string;
+}
+```
+
+### Creating Comments
+
+```typescript
+await createComment(
+  request,
+  commentableId,
+  commentableType,
+  comment,
+  replyingTo
+);
+```
+
+<Steps>
+  <Step title="Select Content">
+    Comments can be added to challenges, workshops, and submissions
+    
+    ```typescript
+    commentable_type: "Challenge" | "Workshop" | "ChallengeUser"
+    ```
+  </Step>
+  
+  <Step title="Write Comment">
+    Share insights, ask questions, or provide feedback
+  </Step>
+  
+  <Step title="Optional Reply">
+    Reply to existing comments for threaded discussions
+    
+    ```typescript
+    replying_to?: string;  // Parent comment ID
+    ```
+  </Step>
+</Steps>
+
+### Managing Comments
+
+<Tabs>
+  <Tab title="Edit">
+    Update your existing comments:
+    
+    ```typescript
+    await updateComment(request, commentId, newComment);
+    // Returns: { success } | { error: "Não foi possível editar o comentário." }
+    ```
+  </Tab>
+  
+  <Tab title="Delete">
+    Remove your comments:
+    
+    ```typescript
+    await deleteComment(request, commentId);
+    // Returns: { success } | { error: "Não foi possível deletar o comentário." }
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+You can only edit or delete your own comments. Admin users may have additional moderation capabilities.
+</Note>
+
+### Comment Display
+
+Comments include:
+- **User Avatar**: Profile picture with badge (PRO/Admin)
+- **Username**: GitHub handle with link
+- **Timestamp**: Human-readable time (e.g., "2 hours ago")
+- **Content**: Formatted comment text
+- **Actions**: Edit/delete for own comments, reply for all
+
+## Reactions
+
+React to submissions and content with emoji reactions.
+
+### Reaction Types
+
+```typescript
+type AllowedReaction = "like" | "exploding-head" | "rocket" | "fire";
+```
+
+<CardGroup cols={4}>
+  <Card title="Like" icon="thumbs-up">
+    Show appreciation
+  </Card>
+  <Card title="Exploding Head" icon="face-exploding">
+    Mind-blowing work
+  </Card>
+  <Card title="Rocket" icon="rocket">
+    Innovative solution
+  </Card>
+  <Card title="Fire" icon="fire">
+    Exceptional quality
+  </Card>
+</CardGroup>
+
+### Reaction Data
+
+```typescript
+type Reactions = {
+  reaction_counts: ReactionCount[];
+  user_reactions: AllowedReaction[];
+}
+
+type ReactionCount = {
+  reaction: AllowedReaction;
+  count: number;
+}
+```
+
+### Adding Reactions
+
+```typescript
+await react(
+  request,
+  reactableId,
+  reactableType,
+  reaction
+);
+```
+
+<Info>
+Reactions can be added to challenge submissions, comments, and other user-generated content.
+</Info>
+
+### Reaction Display
+
+Reaction counts show:
+- Total count per reaction type
+- Your active reactions highlighted
+- Click to toggle reaction on/off
+
+```typescript
+reactions: {
+  reaction_counts: [
+    { reaction: "like", count: 24 },
+    { reaction: "fire", count: 8 },
+    { reaction: "rocket", count: 5 }
+  ],
+  user_reactions: ["like"]  // User has liked this
+}
+```
+
+## Discord Integration
+
+Connect with the Codante community on Discord.
+
+### Discord Connection
+
+<Steps>
+  <Step title="Link Discord Account">
+    Authenticate with Discord OAuth
+    
+    ```typescript
+    discord_user?: string;  // Discord username
+    ```
+  </Step>
+  
+  <Step title="Join Server">
+    Access the Codante Discord server with exclusive channels
+  </Step>
+  
+  <Step title="Mark as Joined">
+    Update challenge progress when joining Discord
+    
+    ```typescript
+    await updateUserJoinedDiscord({
+      slug,
+      joinedDiscord: true,
+      request
+    });
+    ```
+  </Step>
+</Steps>
+
+### Discord Features
+
+<CardGroup cols={2}>
+  <Card title="Challenge Channels" icon="hashtag">
+    Dedicated channels for specific challenges and workshops
+  </Card>
+  <Card title="Real-Time Help" icon="messages">
+    Get quick answers from community members
+  </Card>
+  <Card title="Code Reviews" icon="code-review">
+    Share code snippets and get feedback
+  </Card>
+  <Card title="Networking" icon="users">
+    Connect with developers learning similar technologies
+  </Card>
+</CardGroup>
+
+### Discord Button
+
+Challenges include Discord integration in the participation workflow:
+
+```typescript
+<DiscordButton>
+  <BsDiscord className="w-3 h-3 mr-2" />
+  <span>Entrar</span>
+</DiscordButton>
+```
+
+<Note>
+Joining Discord is optional but recommended for getting help and connecting with other learners.
+</Note>
+
+## Submission Gallery
+
+View and showcase completed challenge submissions.
+
+### Challenge Submissions
+
+```typescript
+type ChallengeUser = {
+  id: number;
+  user: User;
+  challenge: ChallengeSummary;
+  submission_url: string;
+  submission_image_url: string;
+  reactions: Reactions;
+  comments: Comment[];
+  completed: boolean;
+  submitted_at: string | null;
+  listed: boolean;
+}
+```
+
+### Submission Display
+
+Each submission in the gallery shows:
+
+- **Preview Image**: Screenshot or live preview
+- **User Info**: Avatar, name, and badges
+- **Submission URL**: Link to deployed project
+- **Reactions**: Emoji reaction counts
+- **Comments**: Discussion thread
+- **Timestamp**: When the submission was created
+
+### Viewing Submissions
+
+```typescript
+await getChallengeUsers(request, slug);
+// Returns: Array of ChallengeUser submissions
+```
+
+<Info>
+Submissions can be filtered by completion status, reactions, or date.
+</Info>
+
+### Submission Visibility
+
+```typescript
+listed: boolean;  // Controls gallery visibility
+```
+
+<Note>
+Users can choose whether their submission appears in the public gallery.
+</Note>
+
+## User Profiles
+
+Community members have rich profiles:
+
+```typescript
+type User = {
+  id: number;
+  name: string;
+  email: string;
+  github_id: string;
+  is_pro: boolean;
+  avatar: UserAvatar;
+  settings: UserSettings | null;
+  linkedin_user?: string;
+  discord_user?: string;
+  github_user?: string;
+}
+```
+
+### User Avatars
+
+```typescript
+type UserAvatar = {
+  badge: "pro" | "admin" | null;
+  avatar_url: string;
+  name: string;
+  github_user?: string;
+}
+```
+
+<Tabs>
+  <Tab title="PRO Badge">
+    Premium members display a PRO badge on their avatar
+  </Tab>
+  
+  <Tab title="Admin Badge">
+    Platform administrators have special admin badges
+  </Tab>
+  
+  <Tab title="Avatar">
+    GitHub avatar image with links to profile
+  </Tab>
+</Tabs>
+
+### User Settings
+
+```typescript
+type UserSettings = {
+  show_badge: boolean;  // Control badge visibility
+}
+```
+
+## Participant Tracking
+
+See who's working on challenges:
+
+```typescript
+type ChallengeParticipants = {
+  count: number;
+  avatars: UserAvatar[];
+}
+
+await getChallengeParticipants(slug, request);
+```
+
+<CardGroup cols={2}>
+  <Card title="Participant Count" icon="users">
+    Total number of enrolled developers
+  </Card>
+  <Card title="Avatar Display" icon="user-group">
+    Showcases recent participants with avatars
+  </Card>
+</CardGroup>
+
+## GitHub Integration
+
+Deep integration with GitHub for community features:
+
+### GitHub Profile Links
+
+```typescript
+github_user?: string;
+github_id: string;
+```
+
+- Link to user's GitHub profile
+- Display GitHub username
+- Verify repository forks
+
+### Repository Engagement
+
+```typescript
+stars?: number;
+forks?: number;
+```
+
+Challenge repositories display:
+- Star count from GitHub
+- Fork count tracking
+- Repository contributors
+
+<Info>
+Fork the challenge repository to start working. The platform automatically detects and verifies your fork.
+</Info>
+
+## Social Sharing
+
+Share your achievements:
+
+- Challenge completions
+- Certificates earned
+- Project submissions
+- Workshop progress
+
+<CardGroup cols={3}>
+  <Card title="LinkedIn" icon="linkedin">
+    Share certificates and achievements
+  </Card>
+  <Card title="GitHub" icon="github">
+    Link your repositories
+  </Card>
+  <Card title="Discord" icon="discord">
+    Announce completions in community
+  </Card>
+</CardGroup>
+
+## Community Guidelines
+
+<Steps>
+  <Step title="Be Respectful">
+    Treat all community members with respect and professionalism
+  </Step>
+  
+  <Step title="Provide Constructive Feedback">
+    When commenting on submissions, focus on helpful, actionable feedback
+  </Step>
+  
+  <Step title="Share Knowledge">
+    Help others by answering questions and sharing insights
+  </Step>
+  
+  <Step title="Give Credit">
+    Acknowledge inspiration and resources used in your work
+  </Step>
+</Steps>
+
+## Error Handling
+
+### Comment Errors
+
+```typescript
+error: "Ocorreu um erro ao comentar. Por favor, tente novamente ou entre em contato."
+```
+
+### Reaction Errors
+
+```typescript
+error: "Ocorreu um erro ao reagir. Por favor, tente novamente ou entre em contato."
+```
+
+<Note>
+All community actions include error handling with user-friendly messages and retry capabilities.
+</Note>
+
+## API Reference
+
+### Comments
+
+```typescript
+// Create
+await createComment(request, commentableId, commentableType, comment, replyingTo);
+
+// Update
+await updateComment(request, commentId, comment);
+
+// Delete
+await deleteComment(request, commentId);
+```
+
+### Reactions
+
+```typescript
+await react(request, reactableId, reactableType, reaction);
+```
+
+### Discord
+
+```typescript
+await updateUserJoinedDiscord({ slug, joinedDiscord, request });
+```
+
+### Submissions
+
+```typescript
+await getChallengeUsers(request, slug);
+await getChallengeParticipants(slug, request);
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Engage Regularly" icon="calendar-check">
+    Participate in discussions and provide feedback on submissions
+  </Card>
+  <Card title="Ask Questions" icon="circle-question">
+    Don't hesitate to ask for help in comments or Discord
+  </Card>
+  <Card title="Showcase Work" icon="trophy">
+    Submit your best solutions to inspire others
+  </Card>
+  <Card title="Learn from Others" icon="book-open-reader">
+    Study different approaches in the submission gallery
+  </Card>
+</CardGroup>

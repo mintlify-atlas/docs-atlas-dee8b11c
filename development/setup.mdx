@@ -1,0 +1,212 @@
+---
+title: Development Environment Setup
+description: Set up your local development environment for Codante.io
+---
+
+## Prerequisites
+
+Before getting started with Codante.io development, ensure you have the following installed:
+
+<Note>
+  Codante.io requires Node.js version 20 or higher. Check your version with `node --version`.
+</Note>
+
+- **Node.js**: >= 20
+- **Package Manager**: npm (included with Node.js)
+- **Git**: For version control
+
+## Technology Stack
+
+The Codante.io platform is built with modern web technologies:
+
+- **Framework**: React Router v7 (formerly Remix) with Vite
+- **React**: 19.2+
+- **TypeScript**: 5.9+
+- **Styling**: TailwindCSS v4 with custom design system
+- **UI Components**: Radix UI primitives
+- **Animations**: Framer Motion
+- **Backend Integration**: Axios with server-side session management
+- **Authentication**: Server-side sessions with GitHub/Discord OAuth
+
+## Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the Codante.io repository to your local machine:
+    
+    ```bash
+    git clone <repository-url>
+    cd codante
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install all required npm packages:
+    
+    ```bash
+    npm install
+    ```
+    
+    This will install all dependencies listed in `package.json:15-79`, including:
+    - React Router v7 and related packages
+    - TailwindCSS v4 and plugins
+    - Radix UI components
+    - Framer Motion for animations
+    - Authentication libraries (remix-auth, remix-auth-github)
+  </Step>
+
+  <Step title="Configure environment variables">
+    Create a `.env` file in the project root with the required environment variables:
+    
+    ```bash
+    # Session & API Configuration
+    SESSION_SECRET=your-session-secret
+    API_HOST=http://127.0.0.1:8000
+    BASE_URL=http://localhost:3000
+    NODE_ENV=development
+    
+    # GitHub OAuth
+    GITHUB_ID=your-github-client-id
+    GITHUB_SECRET=your-github-client-secret
+    GITHUB_CALLBACK_URL=http://localhost:3000/auth/github/callback
+    
+    # Discord OAuth
+    DISCORD_APP_CLIENT_ID=your-discord-client-id
+    DISCORD_APP_SECRET=your-discord-secret
+    
+    # reCAPTCHA
+    RECAPTCHA_SITE_KEY=your-recaptcha-site-key
+    RECAPTCHA_SECRET_KEY=your-recaptcha-secret-key
+    ```
+    
+    <Note>
+      Environment variables are validated using Zod schema in `app/lib/models/environment.ts`. Missing or invalid variables will cause runtime errors.
+    </Note>
+  </Step>
+
+  <Step title="Start the development server">
+    Run the development server:
+    
+    ```bash
+    npm run dev
+    ```
+    
+    The application will be available at `http://localhost:3000`. The development server includes:
+    - Hot module replacement (HMR)
+    - TypeScript type checking
+    - Automatic route generation
+  </Step>
+</Steps>
+
+## Available Scripts
+
+The project includes several npm scripts for development and deployment:
+
+<CodeGroup>
+```bash Development
+# Start development server (port 3000)
+npm run dev
+```
+
+```bash Build
+# Create production build
+npm run build
+```
+
+```bash Production
+# Run production build
+npm start
+```
+
+```bash Type Checking
+# Type checking + route generation
+npm run typecheck
+```
+
+```bash Linting
+# ESLint check
+npm run lint
+
+# ESLint with auto-fix
+npm run lint-fix
+```
+</CodeGroup>
+
+## Project Structure
+
+```
+codante/
+├── app/
+│   ├── routes/              # Route definitions
+│   ├── components/          # React components
+│   │   ├── _layouts/        # Layout components
+│   │   ├── features/        # Feature-specific components
+│   │   └── ui/             # Reusable UI components
+│   ├── lib/
+│   │   ├── models/         # Data models and types
+│   │   ├── services/       # API and authentication services
+│   │   ├── hooks/          # Custom React hooks
+│   │   └── utils/          # Utility functions
+│   ├── routes.ts           # Route configuration
+│   └── tailwind.css        # TailwindCSS configuration
+├── public/                 # Static assets
+├── package.json
+└── tsconfig.json
+```
+
+## Development Tools
+
+The project is configured with several development tools:
+
+### ESLint Configuration
+
+ESLint is configured with React and TypeScript support (`package.json:94-97`):
+- `eslint-plugin-react` for React-specific linting
+- `eslint-plugin-react-hooks` for hooks linting
+- `typescript-eslint` for TypeScript support
+
+### Prettier
+
+Prettier is configured for code formatting (`package.json:101`).
+
+### Husky & Lint-Staged
+
+Pre-commit hooks automatically format and lint your code (`package.json:112-118`):
+```json
+"lint-staged": {
+  "**/*": ["prettier --write --ignore-unknown"],
+  "**/*.{js,jsx,ts,tsx}": ["eslint --fix --max-warnings=0"]
+}
+```
+
+## Troubleshooting
+
+<Warning>
+  If you encounter module resolution errors, ensure you're using Node.js version 20 or higher.
+</Warning>
+
+### Common Issues
+
+**Port 3000 already in use**
+- Kill the process using port 3000 or configure a different port
+
+**TypeScript errors**
+- Run `npm run typecheck` to generate route types
+- Ensure all dependencies are installed
+
+**Environment variable errors**
+- Verify all required variables are set in `.env`
+- Check `app/lib/models/environment.ts` for validation schema
+
+**Build failures**
+- Clear the build cache: `rm -rf build .react-router`
+- Reinstall dependencies: `rm -rf node_modules package-lock.json && npm install`
+
+## Next Steps
+
+Now that your development environment is set up, explore:
+
+- [Routing](/development/routing) - Learn about React Router v7 routing patterns
+- [Components](/development/components) - Understand the component architecture
+- [Styling](/development/styling) - Master the TailwindCSS v4 styling system
+- [Authentication](/development/authentication) - Implement OAuth authentication

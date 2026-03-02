@@ -1,0 +1,411 @@
+---
+title: Subscription
+description: Subscription model types and functions for managing user PRO subscriptions
+---
+
+## Overview
+
+The Subscription model handles user PRO subscription data, payment methods, subscription status, and integration with the Pagar.me payment system.
+
+## Type Definitions
+
+### Subscription
+
+Complete subscription object with payment and status information.
+
+<Expandable title="Subscription Properties">
+<ResponseField name="id" type="number" required>
+  Unique identifier for the subscription
+</ResponseField>
+
+<ResponseField name="plan_name" type="string | null" required>
+  Name of the subscription plan
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Subscription status: `"active"`, `"pending"`, `"expired"`, or `"canceled"`
+</ResponseField>
+
+<ResponseField name="translated_status" type="string" required>
+  Human-readable status in Portuguese
+</ResponseField>
+
+<ResponseField name="translated_payment_method" type="string" required>
+  Human-readable payment method in Portuguese
+</ResponseField>
+
+<ResponseField name="payment_method" type="string | null" required>
+  Payment method used (e.g., "credit_card", "boleto")
+</ResponseField>
+
+<ResponseField name="boleto_url" type="string | null" required>
+  URL to boleto payment slip (if payment method is boleto)
+</ResponseField>
+
+<ResponseField name="boleto_barcode" type="string | null" required>
+  Boleto barcode number (if payment method is boleto)
+</ResponseField>
+
+<ResponseField name="price_paid_in_cents" type="number | null" required>
+  Price paid in cents (Brazilian Real)
+</ResponseField>
+
+<ResponseField name="acquisition_type" type="string" required>
+  How the subscription was acquired
+</ResponseField>
+
+<ResponseField name="starts_at" type="string" required>
+  Subscription start date (ISO 8601 format)
+</ResponseField>
+
+<ResponseField name="ends_at" type="string" required>
+  Subscription end date (ISO 8601 format)
+</ResponseField>
+
+<ResponseField name="canceled_at" type="string | null" required>
+  Cancellation date (if subscription was canceled)
+</ResponseField>
+
+<ResponseField name="created_at" type="string" required>
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="updated_at" type="string" required>
+  Last update timestamp
+</ResponseField>
+</Expandable>
+
+## Functions
+
+### getSubscription
+
+Fetches the current user's subscription data.
+
+<ParamField path="request" type="Request" required>
+  Request object for authentication
+</ParamField>
+
+```typescript
+async function getSubscription({
+  request,
+}: {
+  request: Request;
+}): Promise<Subscription | null>;
+```
+
+**Returns**: Subscription object or null if user has no subscription
+
+**Example**:
+```typescript
+import { getSubscription } from "~/lib/models/subscription.server";
+import { requireAuth } from "~/lib/services/auth.server";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  await requireAuth(request);
+  
+  const subscription = await getSubscription({ request });
+  
+  return json({ subscription });
+}
+
+export default function SubscriptionPage() {
+  const { subscription } = useLoaderData<typeof loader>();
+  
+  if (!subscription) {
+    return (
+      <div>
+        <p>You don't have an active subscription</p>
+        <Link to="/subscribe">Subscribe to PRO</Link>
+      </div>
+    );
+  }
+  
+  return (
+    <div>
+      <h1>Your Subscription</h1>
+      <p>Plan: {subscription.plan_name}</p>
+      <p>Status: {subscription.translated_status}</p>
+      <p>Ends: {new Date(subscription.ends_at).toLocaleDateString()}</p>
+    </div>
+  );
+}
+```
+
+### getSubscriptionByPagarmeOrderId
+
+Fetches subscription data by Pagar.me order ID.
+
+<ParamField path="request" type="Request" required>
+  Request object for authentication
+</ParamField>
+
+<ParamField path="pagarmeOrderId" type="string" required>
+  Pagar.me order identifier
+</ParamField>
+
+```typescript
+async function getSubscriptionByPagarmeOrderId({
+  request,
+  pagarmeOrderId,
+}: {
+  request: Request;
+  pagarmeOrderId: string;
+}): Promise<Subscription | null>;
+```
+
+**Returns**: Subscription object or null if not found
+
+**Example**:
+```typescript
+import { getSubscriptionByPagarmeOrderId } from "~/lib/models/subscription.server";
+
+export async function loader({ request, params }: LoaderFunctionArgs) {
+  const { orderId } = params;
+  
+  const subscription = await getSubscriptionByPagarmeOrderId({
+    request,
+    pagarmeOrderId: orderId,
+  });
+  
+  if (!subscription) {
+    throw new Response("Subscription not found", { status: 404 });
+  }
+  
+  return json({ subscription });
+}
+```
+
+## Usage Examples
+
+### Subscription Status Page
+
+```typescript
+import { getSubscription } from "~/lib/models/subscription.server";
+import { requireAuth } from "~/lib/services/auth.server";
+import type { Subscription } from "~/lib/models/subscription.server";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const user = await requireAuth(request);
+  const subscription = await getSubscription({ request });
+  
+  return json({ user, subscription });
+}
+
+export default function MySubscriptionPage() {
+  const { user, subscription } = useLoaderData<typeof loader>();
+  
+  if (!subscription) {
+    return (
+      <div>
+        <h1>No Active Subscription</h1>
+        <p>Subscribe to Codante PRO to access all content</p>
+        <Link to="/subscribe" className="btn-primary">
+          Subscribe Now
+        </Link>
+      </div>
+    );
+  }
+  
+  return (
+    <div>
+      <h1>My Subscription</h1>
+      
+      <div>
+        <h2>{subscription.plan_name}</h2>
+        <p>Status: {subscription.translated_status}</p>
+        
+        {subscription.status === "active" && (
+          <span className="badge-success">Active</span>
+        )}
+        {subscription.status === "pending" && (
+          <span className="badge-warning">Pending Payment</span>
+        )}
+        {subscription.status === "expired" && (
+          <span className="badge-error">Expired</span>
+        )}
+        {subscription.status === "canceled" && (
+          <span className="badge-error">Canceled</span>
+        )}
+      </div>
+      
+      <div>
+        <p>Payment Method: {subscription.translated_payment_method}</p>
+        {subscription.price_paid_in_cents && (
+          <p>
+            Price: R$ {(subscription.price_paid_in_cents / 100).toFixed(2)}
+          </p>
+        )}
+      </div>
+      
+      <div>
+        <p>Started: {new Date(subscription.starts_at).toLocaleDateString()}</p>
+        <p>Expires: {new Date(subscription.ends_at).toLocaleDateString()}</p>
+        {subscription.canceled_at && (
+          <p>Canceled: {new Date(subscription.canceled_at).toLocaleDateString()}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+### Boleto Payment Display
+
+```typescript
+import type { Subscription } from "~/lib/models/subscription.server";
+
+function BoletoPayment({ subscription }: { subscription: Subscription }) {
+  if (subscription.payment_method !== "boleto") {
+    return null;
+  }
+  
+  return (
+    <div>
+      <h3>Boleto Payment</h3>
+      
+      {subscription.status === "pending" && (
+        <div className="alert-warning">
+          <p>Waiting for boleto payment confirmation</p>
+        </div>
+      )}
+      
+      {subscription.boleto_barcode && (
+        <div>
+          <p>Barcode:</p>
+          <code>{subscription.boleto_barcode}</code>
+          <button
+            onClick={() => navigator.clipboard.writeText(subscription.boleto_barcode!)}
+          >
+            Copy Barcode
+          </button>
+        </div>
+      )}
+      
+      {subscription.boleto_url && (
+        <a
+          href={subscription.boleto_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-primary"
+        >
+          Download Boleto
+        </a>
+      )}
+    </div>
+  );
+}
+```
+
+### Subscription Confirmation Page
+
+```typescript
+import { getSubscriptionByPagarmeOrderId } from "~/lib/models/subscription.server";
+import { requireAuth } from "~/lib/services/auth.server";
+
+export async function loader({ request, params }: LoaderFunctionArgs) {
+  await requireAuth(request);
+  
+  const { orderId } = params;
+  
+  const subscription = await getSubscriptionByPagarmeOrderId({
+    request,
+    pagarmeOrderId: orderId,
+  });
+  
+  if (!subscription) {
+    throw new Response("Subscription not found", { status: 404 });
+  }
+  
+  return json({ subscription });
+}
+
+export default function SubscriptionConfirmationPage() {
+  const { subscription } = useLoaderData<typeof loader>();
+  
+  return (
+    <div>
+      <h1>Subscription Confirmation</h1>
+      
+      {subscription.status === "active" && (
+        <div className="success-message">
+          <h2>Welcome to Codante PRO!</h2>
+          <p>Your subscription is now active.</p>
+          <Link to="/dashboard">Go to Dashboard</Link>
+        </div>
+      )}
+      
+      {subscription.status === "pending" && (
+        <div className="pending-message">
+          <h2>Payment Pending</h2>
+          <p>We're waiting for your payment confirmation.</p>
+          
+          {subscription.payment_method === "boleto" && (
+            <BoletoPayment subscription={subscription} />
+          )}
+        </div>
+      )}
+      
+      <div>
+        <h3>Subscription Details</h3>
+        <p>Plan: {subscription.plan_name}</p>
+        <p>Status: {subscription.translated_status}</p>
+        <p>Valid until: {new Date(subscription.ends_at).toLocaleDateString()}</p>
+      </div>
+    </div>
+  );
+}
+```
+
+### Checking Subscription Status
+
+```typescript
+import { getSubscription } from "~/lib/models/subscription.server";
+import type { Subscription } from "~/lib/models/subscription.server";
+
+function isSubscriptionActive(subscription: Subscription | null): boolean {
+  if (!subscription) return false;
+  if (subscription.status !== "active") return false;
+  
+  const now = new Date();
+  const endsAt = new Date(subscription.ends_at);
+  
+  return endsAt > now;
+}
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const subscription = await getSubscription({ request });
+  const hasActiveSubscription = isSubscriptionActive(subscription);
+  
+  if (!hasActiveSubscription) {
+    throw redirect("/subscribe");
+  }
+  
+  return json({ subscription });
+}
+```
+
+### Subscription Expiry Warning
+
+```typescript
+import type { Subscription } from "~/lib/models/subscription.server";
+
+function SubscriptionExpiryWarning({ subscription }: { subscription: Subscription }) {
+  const daysUntilExpiry = Math.floor(
+    (new Date(subscription.ends_at).getTime() - new Date().getTime()) /
+    (1000 * 60 * 60 * 24)
+  );
+  
+  if (daysUntilExpiry > 7 || subscription.status !== "active") {
+    return null;
+  }
+  
+  return (
+    <div className="alert-warning">
+      <p>
+        Your subscription expires in {daysUntilExpiry} day{daysUntilExpiry !== 1 ? "s" : ""}.
+      </p>
+      <Link to="/renew">Renew Now</Link>
+    </div>
+  );
+}
+```

@@ -1,0 +1,395 @@
+---
+title: Routing with React Router v7
+description: Learn React Router v7 routing patterns and conventions used in Codante.io
+---
+
+## Overview
+
+Codante.io uses **React Router v7** (the successor to Remix) with **remix-flat-routes** for file-based routing. This provides a powerful, convention-based routing system with built-in support for layouts, nested routes, and data loading.
+
+<Note>
+  React Router v7 was formerly known as Remix. The framework evolved to become React Router, maintaining backward compatibility while adding new features.
+</Note>
+
+## Route Configuration
+
+Routes are configured in `app/routes.ts` using the flat routes convention:
+
+```typescript app/routes.ts
+import { remixRoutesOptionAdapter } from "@react-router/remix-routes-option-adapter";
+import flatRoutes from "remix-flat-routes";
+
+export default remixRoutesOptionAdapter((defineRoutes) => {
+  return flatRoutes("routes", defineRoutes, {
+    ignoredRouteFiles: ["**/.*"], // Ignore dot files
+  });
+});
+```
+
+### Configuration Options
+
+The flat routes system supports several configuration options (commented in the source):
+
+- `appDir`: Application directory (default: "app")
+- `routeDir`: Routes directory (default: "routes")
+- `basePath`: Base path for routes (default: "/")
+- `paramPrefixChar`: Character for route parameters (default: "$")
+- `nestedDirectoryChar`: Character for nested routes (default: "+")
+
+## File-Based Routing Conventions
+
+### Layout Routes
+
+Layout routes start with an underscore and wrap child routes without adding to the URL:
+
+```
+app/routes/
+├── _layout-app/          # Main application layout
+├── _layout-raw/          # Minimal layout for players
+├── _landing-page/        # Landing page layout
+└── _api/                 # API routes
+```
+
+<Tabs>
+  <Tab title="Main App Layout">
+    The `_layout-app/` layout is used for authenticated user areas:
+    - Dashboard
+    - Workshops
+    - Mini Projetos
+    - User profile pages
+  </Tab>
+  
+  <Tab title="Raw Layout">
+    The `_layout-raw/` layout provides minimal UI for:
+    - Video/lesson players
+    - Demo pages
+  </Tab>
+  
+  <Tab title="Landing Page Layout">
+    The `_landing-page/` layout is optimized for marketing pages.
+  </Tab>
+  
+  <Tab title="API Routes">
+    The `_api/` layout handles API endpoints without rendering UI.
+  </Tab>
+</Tabs>
+
+### Route Parameters
+
+Route parameters use the `$` prefix:
+
+```
+app/routes/
+├── _layout-app/
+│   └── mini-projetos/
+│       └── $slug/           # Parameter: /mini-projetos/:slug
+│           └── index.tsx
+```
+
+### Nested Routes
+
+Nested routes are created using directory structure:
+
+```
+app/routes/
+├── _layout-app/
+│   ├── _auth/                # Auth layout (nested)
+│   │   ├── login/
+│   │   ├── register/
+│   │   └── forgot-password/
+│   └── _dashboard/           # Dashboard layout (nested)
+│       └── dashboard/
+│           ├── mini-projetos/
+│           └── workshops/
+```
+
+## Route Modules
+
+### Loader Functions
+
+Loaders run on the server to fetch data before rendering:
+
+```typescript app/routes/_layout-app/_auth/auth/github.callback/index.tsx
+import type { LoaderFunctionArgs } from "react-router";
+import { redirect } from "react-router";
+import { authenticator } from "~/lib/services/github-auth.server";
+import { getSession, commitSession, redirectToCookie } from "~/lib/services/auth.server";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const redirectTo =
+    (await redirectToCookie.parse(request.headers.get("Cookie"))) ?? "/";
+
+  const userData = await authenticator.authenticate("github", request);
+
+  const session = await getSession(request.headers.get("cookie"));
+  session.set("user", { token: userData.token });
+  
+  const headers = new Headers({ "Set-Cookie": await commitSession(session) });
+
+  if (userData.is_new_signup) {
+    const url = new URL(redirectTo, environment().BASE_URL);
+    url.searchParams.append("new-signup", "true");
+    return redirect(url.toString(), { headers });
+  }
+  
+  return redirect(redirectTo, { headers });
+}
+```
+
+### Component Export
+
+Route components are the default export:
+
+```typescript app/routes/_layout-app/_dashboard/dashboard/mini-projetos/index.tsx
+import { useOutletContext } from "react-router";
+import type { Dashboard } from "~/lib/models/dashboard.server";
+
+export default function ChallengeDashboard() {
+  const { dashboardData }: { dashboardData: Dashboard } = useOutletContext();
+  const challengeUsers = dashboardData.challenge_users;
+
+  return (
+    <div>
+      {/* Component content */}
+    </div>
+  );
+}
+```
+
+## Data Loading Patterns
+
+### Server-Side Data Loading
+
+Use loaders for server-side data fetching:
+
+```typescript
+export async function loader({ request }: LoaderFunctionArgs) {
+  const axios = await createAxios(request);
+  const response = await axios.get<User>("/user");
+  return response.data;
+}
+```
+
+### Protected Routes
+
+Implement authentication checks in loaders:
+
+```typescript
+import { requireAuth } from "~/lib/services/auth.server";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  await requireAuth({ request }); // Redirects to /login if not authenticated
+  
+  // Load protected data
+  const data = await fetchProtectedData(request);
+  return data;
+}
+```
+
+### Guest-Only Routes
+
+Prevent authenticated users from accessing certain routes:
+
+```typescript
+import { requireGuest } from "~/lib/services/auth.server";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  await requireGuest({ request }); // Redirects to / if authenticated
+  
+  return {};
+}
+```
+
+## Navigation
+
+### Link Component
+
+Use the `Link` component for client-side navigation:
+
+```tsx
+import { Link } from "react-router";
+
+<Link 
+  to={`/mini-projetos/${challenge.slug}`}
+  prefetch="intent"
+>
+  View Challenge
+</Link>
+```
+
+### NavLink Component
+
+Use `NavLink` for navigation with active state:
+
+```tsx app/components/_layouts/navbar/index.tsx
+import { NavLink } from "react-router";
+
+const navigation = [
+  { name: "Workshops", href: "/workshops" },
+  { name: "Mini Projetos", href: "/mini-projetos" },
+  { name: "Agenda", href: "/agenda" },
+];
+
+{navigation.map((item) => (
+  <NavLink
+    key={item.name}
+    to={item.href}
+    prefetch="intent"
+    className={({ isActive }) =>
+      classNames(
+        isActive
+          ? "bg-background-100/70 dark:bg-background-700 underline"
+          : "text-gray-700 dark:text-gray-300 hover:bg-background-100",
+        "rounded-md px-3 py-2 text-sm font-medium"
+      )
+    }
+  >
+    {item.name}
+  </NavLink>
+))}
+```
+
+### Programmatic Navigation
+
+Use the `useNavigate` hook for programmatic navigation:
+
+```tsx
+import { useNavigate } from "react-router";
+
+function MyComponent() {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    navigate("/workshops");
+  };
+
+  return <button onClick={handleClick}>Go to Workshops</button>;
+}
+```
+
+## Outlet Context
+
+Pass data from parent routes to child routes using outlet context:
+
+```tsx
+// Parent route
+import { Outlet } from "react-router";
+
+export default function ParentRoute() {
+  const user = useLoaderData<User>();
+  
+  return <Outlet context={{ user }} />;
+}
+
+// Child route
+import { useOutletContext } from "react-router";
+
+export default function ChildRoute() {
+  const { user } = useOutletContext<{ user: User }>();
+  
+  return <div>Hello, {user.name}!</div>;
+}
+```
+
+## Route Organization
+
+The application routes are organized by feature:
+
+### Authentication Routes
+
+```
+_layout-app/_auth/
+├── login/
+├── register/
+├── forgot-password/
+├── reset-password/
+└── auth/
+    ├── github/
+    ├── github.callback/
+    └── discord.callback/
+```
+
+### Content Routes
+
+```
+_layout-app/
+├── mini-projetos/          # Challenges
+├── workshops/              # Video workshops
+├── trilhas/               # Learning tracks
+└── agenda/                # Event calendar
+```
+
+### User Areas
+
+```
+_layout-app/_dashboard/
+└── dashboard/
+    ├── mini-projetos/
+    ├── workshops/
+    └── certificados/
+```
+
+### API Routes
+
+```
+_api/
+├── api/
+│   ├── challenge/
+│   ├── set-watched/
+│   └── subscribe/
+├── comments/
+├── plans/
+└── reactions/
+```
+
+## Performance Optimization
+
+### Prefetching
+
+Use the `prefetch` attribute to optimize navigation:
+
+```tsx
+<Link to="/workshops" prefetch="intent">
+  Workshops
+</Link>
+```
+
+Prefetch options:
+- `"intent"` - Prefetch on hover/focus
+- `"render"` - Prefetch on render
+- `"none"` - No prefetching
+
+### Route-Based Code Splitting
+
+React Router v7 automatically code-splits by route, loading only the JavaScript needed for the current page.
+
+## Best Practices
+
+<Steps>
+  <Step title="Use server-only files">
+    Keep server-side code in `.server.ts` files to prevent client bundling:
+    
+    ```
+    auth.server.ts
+    github-auth.server.ts
+    axios.server.ts
+    ```
+  </Step>
+
+  <Step title="Validate environment variables">
+    Use Zod validation in loaders to ensure required environment variables are set (`app/lib/models/environment.ts`).
+  </Step>
+
+  <Step title="Handle errors gracefully">
+    Implement error boundaries and proper error handling in loaders.
+  </Step>
+
+  <Step title="Optimize data loading">
+    Only load data needed for the current route. Use parallel data loading when possible.
+  </Step>
+</Steps>
+
+## Next Steps
+
+- [Components](/development/components) - Learn about the component architecture
+- [Authentication](/development/authentication) - Implement OAuth authentication flows

@@ -1,0 +1,449 @@
+---
+title: Component Architecture
+description: Understand the component architecture and organization patterns in Codante.io
+---
+
+## Component Organization
+
+Codante.io follows a structured component architecture with clear separation of concerns:
+
+```
+app/components/
+├── _layouts/        # Layout components (navbar, footer, root-layout)
+├── features/        # Feature-specific components
+└── ui/             # Reusable UI components
+```
+
+### Layout Components
+
+Layout components (`_layouts/`) provide the structural foundation:
+
+- **navbar/** - Navigation bar with authentication state
+- **footer/** - Application footer
+- **root-layout/** - Root application wrapper
+- **wave/** - Decorative wave backgrounds
+- **google-tag-manager/** - Analytics integration
+- **meta-pixel/** - Facebook Pixel integration
+- **certificate-pdf/** - PDF generation for certificates
+
+### Feature Components
+
+Feature components (`features/`) encapsulate domain-specific functionality:
+
+- **auth/** - Authentication forms and OAuth buttons
+- **form/** - Reusable form components
+- **reactions/** - User reaction system
+- **ranking/** - Ranking badges and displays
+- **workshop/** - Workshop-specific components
+- **submission-card/** - Challenge submission cards
+- **admin-edit-button/** - Admin controls
+
+### UI Components
+
+UI components (`ui/`) provide reusable, composable building blocks:
+
+- **button/** - Button variants
+- **cards/** - Card components and variants
+- **dialog/** - Modal dialogs
+- **dropdown-menu/** - Dropdown menus
+- **motion/** - Animated components
+- **video-players/** - Vimeo and YouTube players
+
+## Component Patterns
+
+### Component with Variants
+
+Use `class-variance-authority` for component variants:
+
+```typescript app/components/ui/button/index.tsx
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "~/lib/utils/cn";
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm ring-offset-white transition-colors focus-visible:outline-hidden focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: "bg-brand text-gray-50 hover:bg-brand/90",
+        destructive: "bg-red-500 text-gray-50 hover:bg-red-500/90",
+        outline: "border-[1.5px] border-background-300 bg-white text-gray-800 hover:bg-gray-100",
+        ghost: "hover:bg-gray-100 hover:text-gray-900",
+        link: "text-gray-900 underline-offset-4 hover:underline",
+        pro: "text-gray-700 bg-linear-to-r animate-bg from-amber-100 via-amber-200 to-amber-400",
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+        sm: "h-9 rounded-md px-3",
+        lg: "h-11 rounded-md px-8",
+        xl: "h-14 rounded-md px-10",
+        icon: "h-10 w-10",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  },
+);
+
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean;
+}
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button";
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props}
+      />
+    );
+  },
+);
+Button.displayName = "Button";
+
+export { Button, buttonVariants };
+```
+
+### Usage Examples
+
+<CodeGroup>
+```tsx Default Button
+import { Button } from "~/components/ui/button";
+
+<Button>Click me</Button>
+```
+
+```tsx Variant Buttons
+<Button variant="default">Default</Button>
+<Button variant="destructive">Delete</Button>
+<Button variant="outline">Cancel</Button>
+<Button variant="ghost">Ghost</Button>
+<Button variant="pro">Upgrade to PRO</Button>
+```
+
+```tsx Size Variants
+<Button size="sm">Small</Button>
+<Button size="default">Default</Button>
+<Button size="lg">Large</Button>
+<Button size="xl">Extra Large</Button>
+<Button size="icon"><IconComponent /></Button>
+```
+
+```tsx As Child Pattern
+import { Link } from "react-router";
+
+<Button asChild>
+  <Link to="/workshops">View Workshops</Link>
+</Button>
+```
+</CodeGroup>
+
+## Card Components
+
+Card components use a composable pattern with multiple variants:
+
+```typescript app/components/ui/cards/card/index.tsx
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "~/lib/utils/cn";
+
+const cardVariants = cva(
+  "border-[1.5px] bg-background-50 dark:bg-background-800 dark:text-white transition-colors overflow-hidden",
+  {
+    variants: {
+      border: {
+        default: "dark:border-background-700 border-background-200 dark:shadow-md shadow-xs",
+        bright: "dark:border-background-600 border-background-200 shadow-md",
+        dull: "dark:border-background-700 border-background-100 shadow-xs",
+        brand: "border-brand-500 dark:border-brand-500 shadow-md",
+        "brand-l": "border-background-200 border-l-brand-500 border-l-4 shadow-md",
+        none: "border-0 shadow-xs",
+      },
+      hover: {
+        default: "",
+        "brand-light": "hover:shadow-md hover:border-brand-300",
+        brand: "hover:shadow-md hover:border-brand-400",
+      },
+      rounded: {
+        default: "rounded-lg",
+        "2xl": "rounded-2xl",
+      },
+    },
+    defaultVariants: {
+      border: "default",
+      hover: "default",
+      rounded: "default",
+    },
+  },
+);
+
+const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ className, border, hover, rounded, ...props }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn(cardVariants({ border, hover, rounded, className }))}
+        {...props}
+      />
+    );
+  },
+);
+```
+
+### Card Composition
+
+```tsx
+import { 
+  Card, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription, 
+  CardContent, 
+  CardFooter 
+} from "~/components/ui/cards/card";
+
+<Card border="brand" hover="brand" rounded="2xl">
+  <CardHeader>
+    <CardTitle>Workshop Title</CardTitle>
+    <CardDescription>Learn advanced React patterns</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <p>Workshop content goes here...</p>
+  </CardContent>
+  <CardFooter>
+    <Button>Enroll Now</Button>
+  </CardFooter>
+</Card>
+```
+
+### Moving Border Card
+
+For premium content, use the animated border card:
+
+```tsx
+import { MovingBorderCard } from "~/components/ui/cards/card";
+
+<MovingBorderCard movingBorderColor="pro" rounded="2xl">
+  <CardHeader>
+    <CardTitle>PRO Workshop</CardTitle>
+  </CardHeader>
+  <CardContent>
+    Exclusive PRO content
+  </CardContent>
+</MovingBorderCard>
+```
+
+## Radix UI Components
+
+Codante.io uses Radix UI primitives for accessible, unstyled components:
+
+### Dialog Example
+
+```tsx
+import * as Dialog from "@radix-ui/react-dialog";
+import { cn } from "~/lib/utils/cn";
+
+function MyDialog() {
+  return (
+    <Dialog.Root>
+      <Dialog.Trigger asChild>
+        <Button>Open Dialog</Button>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg p-6">
+          <Dialog.Title>Dialog Title</Dialog.Title>
+          <Dialog.Description>
+            Dialog description goes here
+          </Dialog.Description>
+          {/* Dialog content */}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+```
+
+### Available Radix Components
+
+The project includes these Radix UI components (`package.json:21-33`):
+
+- `@radix-ui/react-dialog` - Modal dialogs
+- `@radix-ui/react-dropdown-menu` - Dropdown menus
+- `@radix-ui/react-hover-card` - Hover cards
+- `@radix-ui/react-popover` - Popovers
+- `@radix-ui/react-select` - Select inputs
+- `@radix-ui/react-slider` - Range sliders
+- `@radix-ui/react-toast` - Toast notifications
+- `@radix-ui/react-tooltip` - Tooltips
+- `@radix-ui/react-toggle` - Toggle buttons
+
+## Motion Components
+
+Animated components use Framer Motion:
+
+```
+app/components/ui/motion/
+├── sparkles/              # Sparkle effects
+├── blur-reveal/           # Blur reveal animations
+├── animated-shiny-text/   # Shiny text effect
+├── animated-list/         # List animations
+└── animated-beam/         # Beam animations
+```
+
+### Example: Animated Navbar
+
+```tsx app/components/_layouts/navbar/index.tsx
+import { motion } from "framer-motion";
+
+function MobileNavbar({ open }: { open: boolean }) {
+  return (
+    <motion.div
+      animate={{ opacity: open ? 1 : 0, height: open ? "auto" : 0 }}
+      transition={{ duration: 0.2 }}
+      initial={{ opacity: 0, height: 0 }}
+      exit={{ height: 0, transition: { duration: 0.2 } }}
+    >
+      {/* Mobile menu content */}
+    </motion.div>
+  );
+}
+```
+
+## Layout Components
+
+### Navbar Component
+
+The navbar handles authentication state and responsive design:
+
+```tsx app/components/_layouts/navbar/index.tsx
+import { Link, NavLink } from "react-router";
+import { useColorMode } from "~/lib/contexts/color-mode-context";
+import type { User } from "~/lib/models/user.server";
+
+const navigation = [
+  { name: "Workshops", href: "/workshops" },
+  { name: "Mini Projetos", href: "/mini-projetos" },
+  { name: "Agenda", href: "/agenda" },
+];
+
+export default function Navbar({ user }: { user: User | null }) {
+  const { colorMode } = useColorMode();
+  
+  return (
+    <nav className="text-gray-900 bg-transparent">
+      <div className="container mx-auto">
+        <div className="flex items-center justify-between h-16">
+          <Link to="/">
+            <img 
+              src={colorMode === "light" ? "/cdnt-light.svg" : "/cdnt.svg"} 
+              alt="Codante" 
+            />
+          </Link>
+          
+          {navigation.map((item) => (
+            <NavLink key={item.name} to={item.href}>
+              {item.name}
+            </NavLink>
+          ))}
+          
+          {user ? <ProfileMenu user={user} /> : <LoginLink />}
+        </div>
+      </div>
+    </nav>
+  );
+}
+```
+
+## Utility Functions
+
+### cn() - Class Name Utility
+
+Combine and merge Tailwind classes:
+
+```typescript app/lib/utils/cn.ts
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+```
+
+Usage:
+
+```tsx
+import { cn } from "~/lib/utils/cn";
+
+<div className={cn(
+  "base-class",
+  isActive && "active-class",
+  "override-class"
+)} />
+```
+
+## Best Practices
+
+<Steps>
+  <Step title="Use TypeScript for type safety">
+    Define proper interfaces for component props:
+    
+    ```tsx
+    interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+      variant?: "default" | "outline" | "ghost";
+      size?: "sm" | "default" | "lg";
+    }
+    ```
+  </Step>
+
+  <Step title="Leverage composition over props">
+    Use compound components for flexibility:
+    
+    ```tsx
+    <Card>
+      <CardHeader>
+        <CardTitle>Title</CardTitle>
+      </CardHeader>
+      <CardContent>Content</CardContent>
+    </Card>
+    ```
+  </Step>
+
+  <Step title="Use forwardRef for ref access">
+    Enable ref forwarding for all reusable components:
+    
+    ```tsx
+    const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+      (props, ref) => <button ref={ref} {...props} />
+    );
+    ```
+  </Step>
+
+  <Step title="Apply dark mode support">
+    Use Tailwind dark mode variants consistently:
+    
+    ```tsx
+    <div className="bg-white dark:bg-background-800 text-gray-900 dark:text-white">
+    ```
+  </Step>
+</Steps>
+
+## Component Testing
+
+When creating new components:
+
+1. **Define clear props interfaces** with TypeScript
+2. **Support dark mode** with appropriate color variants
+3. **Make components responsive** using Tailwind breakpoints
+4. **Add accessibility features** (ARIA labels, keyboard navigation)
+5. **Use Radix UI primitives** for complex interactions
+6. **Apply consistent spacing** using Tailwind spacing scale
+
+## Next Steps
+
+- [Styling](/development/styling) - Learn the TailwindCSS v4 styling system
+- [Routing](/development/routing) - Understand React Router v7 patterns

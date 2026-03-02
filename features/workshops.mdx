@@ -1,0 +1,379 @@
+---
+title: 'Workshops'
+description: 'Video workshops with structured lessons and progress tracking'
+---
+
+## Overview
+
+Workshops are comprehensive video-based courses taught by industry professionals. Each workshop consists of organized lessons with progress tracking, downloadable resources, and optional hands-on challenges.
+
+<CardGroup cols={2}>
+  <Card title="Browse Workshops" icon="video" href="/workshops">
+    Explore available video workshops
+  </Card>
+  <Card title="Live Streaming" icon="signal-stream" href="#live-workshops">
+    Join live workshop sessions
+  </Card>
+</CardGroup>
+
+## Workshop Structure
+
+```typescript
+type Workshop = {
+  id: string | number;
+  name: string;
+  slug: string;
+  status: "draft" | "published" | "soon" | "archived" | "streaming";
+  difficulty: 1 | 2 | 3;
+  duration_in_seconds: number;
+  short_description: string;
+  description: string;
+  instructor: Instructor;
+  is_standalone: boolean;
+  is_premium: boolean;
+  lessons: SidebarLesson[];
+  lesson_sections: LessonSection[];
+  resources: Resource[];
+  tags: Tag[];
+}
+```
+
+### Workshop Types
+
+<Tabs>
+  <Tab title="Standalone Workshops">
+    Independent courses marked with a live icon. These are comprehensive workshop sessions recorded or streamed live.
+    
+    ```typescript
+    is_standalone: true  // Workshop icon: RiLiveLine
+    ```
+  </Tab>
+  
+  <Tab title="Tutorial Workshops">
+    Solution-focused tutorials that teach specific concepts or accompany challenges.
+    
+    ```typescript
+    is_standalone: false  // Tutorial icon: AiOutlineSolution
+    ```
+  </Tab>
+</Tabs>
+
+## Lesson Organization
+
+Workshops are organized into sections with individual lessons:
+
+```typescript
+lesson_sections: {
+  name: string;
+  lesson_ids: number[];
+}[];
+
+lessons: SidebarLesson[];
+```
+
+<Steps>
+  <Step title="Sections">
+    Lessons are grouped into logical sections (e.g., "Introduction", "Core Concepts", "Advanced Topics")
+  </Step>
+  
+  <Step title="Individual Lessons">
+    Each lesson is a video segment with a specific topic
+  </Step>
+  
+  <Step title="Progress Tracking">
+    The platform tracks which lessons you've watched
+    
+    ```typescript
+    first_unwatched_lesson: SidebarLesson | null;
+    ```
+  </Step>
+</Steps>
+
+## Workshop Metadata
+
+### Difficulty Levels
+
+<CardGroup cols={3}>
+  <Card title="Level 1" icon="seedling">
+    Beginner-friendly content
+  </Card>
+  <Card title="Level 2" icon="chart-line">
+    Intermediate concepts
+  </Card>
+  <Card title="Level 3" icon="rocket">
+    Advanced techniques
+  </Card>
+</CardGroup>
+
+### Workshop Information
+
+Each workshop displays:
+
+- **Difficulty level**: Visual indicator (1-3)
+- **Lessons count**: Total number of video lessons
+- **Duration**: Human-readable format (e.g., "2h 30min")
+- **Instructor**: Name and avatar with bio on hover
+- **Access level**: Free or PRO content indicator
+
+```typescript
+<CardItemDifficulty difficulty={workshop.difficulty} />
+<CardItemLessonsCount lessonsCount={workshop.lessons.length} />
+<CardItemDuration durationString={humanTimeFormat(duration_in_seconds)} />
+```
+
+## Instructors
+
+Workshops are taught by experienced developers:
+
+```typescript
+type Instructor = {
+  id: number;
+  name: string;
+  company: string;
+  avatar_url: string;
+  bio: string;
+  links: InstructorLink[];
+}
+```
+
+<Info>
+Hover over an instructor's card to view their full bio and social links.
+</Info>
+
+## Enrollment and Progress
+
+### Joining a Workshop
+
+```typescript
+await userJoinedWorkshop(slug, request);
+// Registers user participation in the workshop
+```
+
+### Tracking Progress
+
+```typescript
+type WorkshopUser = {
+  id: number;
+  workshop_id: number;
+  user_id: number;
+  status: "in-progress" | "completed";
+  completed_at: string;
+  created_at: string;
+  updated_at: string;
+  certificate: Certificate;
+}
+```
+
+<Note>
+Your progress is automatically saved as you watch lessons. Return anytime to continue where you left off.
+</Note>
+
+## Workshop Resources
+
+Each workshop can include downloadable resources:
+
+```typescript
+resources: {
+  name: string;
+  type: string;
+  url: string;
+}[];
+```
+
+Resource types may include:
+- Code repositories
+- PDF guides
+- Reference documentation
+- External links
+- Supplementary materials
+
+## Live Workshops
+
+Codeante supports live-streamed workshops:
+
+```typescript
+status: "streaming";
+streaming_url: string | null;
+published_at: string;  // Scheduled start time
+```
+
+### Live Features
+
+<Steps>
+  <Step title="Scheduled Sessions">
+    Workshops display scheduled date and time before they go live
+    
+    <Info>
+    Alert: "Assista ao vivo no dia [date] às [time]."
+    </Info>
+  </Step>
+  
+  <Step title="Live Indicator">
+    Active streams show a prominent "happening now" banner
+    
+    <Note>
+    Alert: "Esse workshop está acontecendo agora!"
+    </Note>
+  </Step>
+  
+  <Step title="On-Demand Access">
+    After streaming, workshops become available on-demand for all users
+  </Step>
+</Steps>
+
+## Workshop Cards
+
+Workshops appear as cards in listings:
+
+```typescript
+type WorkshopCard = {
+  id: string;
+  name: string;
+  slug: string;
+  video_url?: string;
+  duration_in_seconds: number;
+  status: string;
+  is_standalone: boolean;
+  is_premium: boolean;
+  lessons_count: number;
+  instructor: InstructorSummary;
+  published_at?: string;
+  streaming_url?: string | null;
+  pivot?: {
+    status: string;
+    completed_at: string;
+    started_at: string;
+    percentage_completed: number;
+  };
+}
+```
+
+<Info>
+The `pivot` object tracks your personal progress through the workshop.
+</Info>
+
+## Related Challenges
+
+Workshops can be paired with hands-on challenges:
+
+```typescript
+challenge?: Challenge;
+```
+
+<Card title="Practice What You Learn" icon="code">
+  Apply workshop concepts by completing the associated coding challenge
+</Card>
+
+## Filtering Workshops
+
+Browse workshops by technology:
+
+```typescript
+await getWorkshops({ tech: "react" });
+await getWorkshops({ tech: "" });  // All workshops
+```
+
+## Access Control
+
+### Free Workshops
+
+```typescript
+is_premium: false
+```
+
+<CardGroup cols={2}>
+  <Card title="Open Access" icon="unlock">
+    Available to all registered users
+  </Card>
+  <Card title="No Time Limits" icon="infinity">
+    Watch at your own pace
+  </Card>
+</CardGroup>
+
+### Premium Workshops
+
+```typescript
+is_premium: true
+```
+
+<Note>
+Premium workshops require an active PRO subscription. A lock icon and "Conteúdo PRO" badge appear on premium content.
+</Note>
+
+## Certificates
+
+Upon completion, request a certificate:
+
+```typescript
+workshop_user: {
+  certificate: Certificate;
+  status: "completed";
+  completed_at: string;
+}
+```
+
+See [Certification](/features/certification) for more details.
+
+## Workshop Statuses
+
+<Tabs>
+  <Tab title="Published">
+    Available for viewing with all lessons accessible
+  </Tab>
+  
+  <Tab title="Soon">
+    Scheduled for future release. Shows countdown or scheduled date.
+  </Tab>
+  
+  <Tab title="Streaming">
+    Currently live-streaming with real-time viewing
+  </Tab>
+  
+  <Tab title="Draft">
+    Not visible to regular users (admin only)
+  </Tab>
+  
+  <Tab title="Archived">
+    No longer actively promoted but may still be accessible
+  </Tab>
+</Tabs>
+
+## API Reference
+
+### Get All Workshops
+
+```typescript
+await getWorkshops({ tech: "" });
+// Returns: Array<WorkshopCard>
+```
+
+### Get Workshop by Slug
+
+```typescript
+await getWorkshop(slug, request);
+// Returns: Workshop | null
+```
+
+### Join Workshop
+
+```typescript
+await userJoinedWorkshop(slug, request);
+// Returns: { message?: string }
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Take Notes" icon="pen-to-square">
+    Document key concepts and code snippets while watching
+  </Card>
+  <Card title="Code Along" icon="laptop-code">
+    Follow along with the instructor by coding in your own environment
+  </Card>
+  <Card title="Complete Challenges" icon="flag-checkered">
+    Reinforce learning with associated coding challenges
+  </Card>
+  <Card title="Pace Yourself" icon="clock">
+    Progress is saved automatically - learn at your own speed
+  </Card>
+</CardGroup>

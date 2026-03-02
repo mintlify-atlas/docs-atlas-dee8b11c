@@ -1,0 +1,356 @@
+---
+title: "Lessons"
+description: "Managing lesson content on Codante.io"
+---
+
+Lessons are individual learning units within workshops or challenge solutions. They can be video-based or text-based content.
+
+## Lesson Data Structure
+
+The `Lesson` type represents a single lesson:
+
+### Core Properties
+
+<ParamField path="id" type="number" required>
+  Unique identifier for the lesson
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Display name of the lesson
+</ParamField>
+
+<ParamField path="slug" type="string" required>
+  URL-friendly identifier (e.g., `/aulas/intro-to-hooks`)
+</ParamField>
+
+<ParamField path="workshop_id" type="string" required>
+  ID of the parent workshop
+</ParamField>
+
+<ParamField path="section" type="string">
+  Section name for organizing lessons within a workshop
+</ParamField>
+
+### Content
+
+<ParamField path="type" type="enum" required>
+  Lesson content type: `"video"` or `"text"`
+</ParamField>
+
+<ParamField path="description" type="string">
+  Brief description of lesson content
+</ParamField>
+
+<ParamField path="content" type="string | React.JSX.Element">
+  Lesson content (markdown for text lessons, JSX for rendered content)
+</ParamField>
+
+<ParamField path="video_url" type="string">
+  Vimeo or video platform URL for video lessons
+</ParamField>
+
+<ParamField path="thumbnail_url" type="string">
+  Preview image for the lesson
+</ParamField>
+
+### Metadata
+
+<ParamField path="duration_in_seconds" type="number" required>
+  Total lesson duration in seconds
+</ParamField>
+
+<ParamField path="created_at" type="string" required>
+  ISO date string of lesson creation
+</ParamField>
+
+<ParamField path="updated_at" type="string" required>
+  ISO date string of last update
+</ParamField>
+
+### Access Control
+
+<ParamField path="available_to" type="AvailableTo" required>
+  Access level: `"all"`, `"logged_in"`, or `"pro"`
+</ParamField>
+
+<ParamField path="user_can_view" type="boolean">
+  Whether current user has permission to view this lesson
+</ParamField>
+
+### User Progress
+
+<ParamField path="user_completed" type="boolean">
+  Whether the current user has marked this lesson as completed
+</ParamField>
+
+### Comments
+
+<ParamField path="comments" type="Comment[]" required>
+  Array of comment objects for lesson discussion
+</ParamField>
+
+## Access Levels
+
+Lessons have three access levels defined by the `AvailableTo` type:
+
+<Steps>
+  <Step title="all">
+    Lesson is publicly accessible to all users (free content)
+  </Step>
+
+  <Step title="logged_in">
+    Lesson requires user authentication but no subscription
+  </Step>
+
+  <Step title="pro">
+    Lesson requires an active premium subscription
+  </Step>
+</Steps>
+
+<Info>
+  The `user_can_view` property reflects the current user's actual access based on their authentication status and subscription level.
+</Info>
+
+## API Functions
+
+### Fetching Lessons
+
+<Steps>
+  <Step title="Get Single Lesson">
+    Retrieve a specific lesson by slug:
+    
+    ```typescript
+    const lesson = await getLesson("intro-to-hooks", request);
+    ```
+    
+    Returns a complete `Lesson` object or `null` if not found.
+    
+    The `request` parameter is used to:
+    - Determine user authentication status
+    - Check subscription level for access control
+    - Track user progress (`user_completed`)
+  </Step>
+</Steps>
+
+### Marking Completion
+
+<Steps>
+  <Step title="Mark as Completed">
+    Mark a lesson as completed for the current user:
+    
+    ```typescript
+    await setCompleted("123", request, true);
+    ```
+    
+    This updates the user's progress tracking.
+  </Step>
+
+  <Step title="Mark as Uncompleted">
+    Remove completion status:
+    
+    ```typescript
+    await setCompleted("123", request, false);
+    ```
+    
+    Useful if user wants to revisit or reset their progress.
+  </Step>
+</Steps>
+
+## Lesson Types
+
+### Video Lessons
+
+Video lessons are the primary content type:
+
+```typescript
+{
+  type: "video",
+  video_url: "https://vimeo.com/123456789",
+  thumbnail_url: "https://cdn.codante.io/thumbnails/lesson.jpg",
+  duration_in_seconds: 720
+}
+```
+
+<Note>
+  Video lessons use Vimeo for hosting and playback. The `video_url` should be a valid Vimeo URL.
+</Note>
+
+### Text Lessons
+
+Text-based lessons for written content:
+
+```typescript
+{
+  type: "text",
+  content: "# Introduction\n\nThis is a markdown lesson...",
+  duration_in_seconds: 300 // estimated reading time
+}
+```
+
+<Info>
+  Text lesson `content` supports full markdown syntax and can include code blocks, images, and other rich formatting.
+</Info>
+
+## Lesson Organization
+
+Lessons are organized within workshops through sections:
+
+### In Workshop Context
+
+```typescript
+// Workshop includes lesson organization
+workshop.lesson_sections = [
+  {
+    name: "Getting Started",
+    lesson_ids: [1, 2, 3]
+  },
+  {
+    name: "Advanced Topics",
+    lesson_ids: [4, 5, 6]
+  }
+];
+
+workshop.lessons = [
+  { id: 1, name: "Introduction", section: "Getting Started" },
+  { id: 2, name: "Setup", section: "Getting Started" },
+  // ...
+];
+```
+
+### Section Property
+
+Each lesson can have a `section` string matching a section name:
+
+<Steps>
+  <Step title="Sectioned Lessons">
+    Lessons with a `section` value are grouped in the workshop UI
+  </Step>
+
+  <Step title="Unsectioned Lessons">
+    Lessons without a `section` appear in default grouping
+  </Step>
+</Steps>
+
+## Route Structure
+
+Lessons are accessed through the video player layout:
+
+- **Player**: `/_layout-raw/_player/aulas_.$slug/index.tsx`
+- Uses minimal layout for distraction-free learning
+- Includes sidebar with lesson navigation
+- Shows related lessons from same workshop
+
+<Info>
+  Lesson routes use the Portuguese term "aulas" (classes/lessons) in URLs.
+</Info>
+
+## Progress Tracking
+
+Lesson completion is tracked at multiple levels:
+
+<Steps>
+  <Step title="Individual Lesson">
+    `user_completed` boolean on each lesson
+  </Step>
+
+  <Step title="Workshop Progress">
+    Calculated from completed lessons:
+    ```typescript
+    percentage_completed = (completed_lessons / total_lessons) * 100
+    ```
+  </Step>
+
+  <Step title="First Unwatched">
+    Workshop includes `first_unwatched_lesson` for quick access:
+    ```typescript
+    workshop.first_unwatched_lesson // Next lesson to watch
+    ```
+  </Step>
+</Steps>
+
+## Sidebar Lesson Type
+
+The `SidebarLesson` type (referenced but defined elsewhere) is used in workshop navigation:
+
+```typescript
+// Extended lesson data for player sidebar
+type SidebarLesson = {
+  id: number;
+  name: string;
+  slug: string;
+  duration_in_seconds: number;
+  user_completed?: boolean;
+  section?: string;
+  // ... additional sidebar-specific fields
+};
+```
+
+<Note>
+  `SidebarLesson` is a specialized version of `Lesson` optimized for navigation UI.
+</Note>
+
+## Comment Integration
+
+Lessons support discussion through comments:
+
+```typescript
+lesson.comments = [
+  {
+    id: 1,
+    user: { name: "João", avatar_url: "..." },
+    content: "Great explanation!",
+    created_at: "2024-01-15T10:30:00Z",
+    replies: [...]
+  }
+];
+```
+
+<Steps>
+  <Step title="Comment Display">
+    Comments shown below lesson content
+  </Step>
+
+  <Step title="User Interaction">
+    Users can add comments and replies
+  </Step>
+
+  <Step title="Moderation">
+    Comments support moderation for quality control
+  </Step>
+</Steps>
+
+## Best Practices
+
+<Steps>
+  <Step title="Duration Accuracy">
+    Set accurate `duration_in_seconds` for progress tracking and time estimates
+  </Step>
+
+  <Step title="Access Control">
+    Use `available_to` strategically:
+    - Free introductory lessons: `"all"`
+    - Member content: `"logged_in"`
+    - Premium features: `"pro"`
+  </Step>
+
+  <Step title="Thumbnail Images">
+    Provide thumbnails for better visual navigation:
+    - Video lessons: Use video frame or custom image
+    - Text lessons: Consider topic illustration
+  </Step>
+
+  <Step title="Logical Sections">
+    Group related lessons in sections for better organization
+  </Step>
+</Steps>
+
+## Related Types
+
+### Workshop
+Parent container for lessons, accessed via `workshop_id`.
+
+### Comment
+User comments and discussions on lesson content.
+
+### User
+User progress and completion tracking.

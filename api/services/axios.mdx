@@ -1,0 +1,286 @@
+---
+title: 'Axios Configuration'
+description: 'Configured Axios client for API requests with automatic authentication headers'
+---
+
+## Overview
+
+The Axios service provides a pre-configured Axios instance for making HTTP requests to the Codante API. It automatically includes authentication headers when a request context is provided.
+
+## Functions
+
+### createAxios()
+
+Create an Axios instance with automatic authentication and configured base URL.
+
+```typescript
+export async function createAxios(request: Request | null = null)
+```
+
+<ParamField path="request" type="Request | null" default="null">
+  Optional HTTP request object. When provided, authentication token and cookies are automatically included in headers.
+</ParamField>
+
+<ResponseField name="axios" type="AxiosInstance">
+  Configured Axios instance ready for API calls
+</ResponseField>
+
+## Configuration
+
+The Axios instance is configured with the following defaults:
+
+### Base Headers
+
+All requests include these headers:
+
+```typescript
+{
+  "X-Requested-With": "XMLHttpRequest",
+  "Content-Type": "application/json",
+}
+```
+
+### Authenticated Headers
+
+When a `request` is provided, additional headers are included:
+
+```typescript
+{
+  "X-Requested-With": "XMLHttpRequest",
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${token}`,
+  Cookie: request.headers.get("Cookie"),
+}
+```
+
+<Note>
+  The authentication token is automatically retrieved from the session using `currentToken({ request })`.
+</Note>
+
+### Base URL
+
+The base URL is configured from environment variables:
+
+```typescript
+{
+  baseURL: environment().API_HOST,
+}
+```
+
+<ParamField path="API_HOST" type="string" required>
+  API host URL from environment configuration
+</ParamField>
+
+## Usage Examples
+
+### Unauthenticated Request
+
+For public endpoints that don't require authentication:
+
+```typescript
+import { createAxios } from "~/lib/services/axios.server";
+
+export async function loader() {
+  const axios = await createAxios();
+  
+  const response = await axios.get("/public/challenges");
+  
+  return json({ challenges: response.data });
+}
+```
+
+### Authenticated Request
+
+For protected endpoints requiring user authentication:
+
+```typescript
+import { createAxios } from "~/lib/services/axios.server";
+import type { LoaderFunctionArgs } from "react-router";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const axios = await createAxios(request);
+  
+  const response = await axios.get("/user/submissions");
+  
+  return json({ submissions: response.data });
+}
+```
+
+### POST Request with Data
+
+```typescript
+import { createAxios } from "~/lib/services/axios.server";
+import type { ActionFunctionArgs } from "react-router";
+
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData();
+  const axios = await createAxios(request);
+  
+  try {
+    const response = await axios.post("/challenges/submit", {
+      challenge_id: formData.get("challengeId"),
+      solution_url: formData.get("solutionUrl"),
+    });
+    
+    return json({ success: true, submission: response.data });
+  } catch (error: any) {
+    return json(
+      { errors: error?.response?.data?.message },
+      { status: error?.response?.status || 500 }
+    );
+  }
+}
+```
+
+### Error Handling
+
+```typescript
+import { createAxios } from "~/lib/services/axios.server";
+import type { LoaderFunctionArgs } from "react-router";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const axios = await createAxios(request);
+  
+  try {
+    const response = await axios.get("/user/profile");
+    return json({ profile: response.data });
+  } catch (error: any) {
+    // Handle 401 Unauthorized
+    if (error?.response?.status === 401) {
+      return redirect("/login");
+    }
+    
+    // Handle validation errors
+    if (error?.response?.status === 422) {
+      return json(
+        { errors: error?.response?.data?.errors },
+        { status: 422 }
+      );
+    }
+    
+    // Handle other errors
+    throw new Response("Server Error", { status: 500 });
+  }
+}
+```
+
+## Common API Endpoints
+
+The Axios client is commonly used with these endpoints:
+
+<CodeGroup>
+
+```typescript Authentication
+// Register
+await axios.post("/register", {
+  name,
+  email,
+  password,
+  password_confirmation: passwordConfirmation,
+});
+
+// Login
+await axios.post("/login", { email, password });
+
+// Logout
+await axios.post("/logout");
+
+// Get current user
+await axios.get("/user");
+```
+
+```typescript Challenges
+// List challenges
+await axios.get("/challenges");
+
+// Get challenge details
+await axios.get(`/challenges/${slug}`);
+
+// Submit solution
+await axios.post("/submissions", {
+  challenge_id: challengeId,
+  solution_url: solutionUrl,
+});
+```
+
+```typescript Workshops
+// List workshops
+await axios.get("/workshops");
+
+// Get workshop details
+await axios.get(`/workshops/${slug}`);
+
+// Mark lesson complete
+await axios.post(`/lessons/${lessonId}/complete");
+```
+
+```typescript User Data
+// Get user submissions
+await axios.get("/user/submissions");
+
+// Get user certificates
+await axios.get("/user/certificates");
+
+// Update profile
+await axios.put("/user/profile", {
+  name,
+  bio,
+  github_user,
+});
+```
+
+</CodeGroup>
+
+## TypeScript Types
+
+For type-safe responses, use generic types:
+
+```typescript
+import type { User } from "~/lib/models/user.server";
+import { createAxios } from "~/lib/services/axios.server";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const axios = await createAxios(request);
+  
+  // Axios will know the response type
+  const response = await axios.get<User>("/user");
+  
+  // response.data is typed as User
+  return json({ user: response.data });
+}
+```
+
+## Implementation Details
+
+The complete implementation:
+
+```typescript
+import type { RawAxiosRequestHeaders } from "axios";
+import axios from "axios";
+import { environment } from "~/lib/models/environment";
+import { currentToken } from "~/lib/services/auth.server";
+
+export async function createAxios(request: Request | null = null) {
+  let headers: RawAxiosRequestHeaders = {
+    "X-Requested-With": "XMLHttpRequest",
+    "Content-Type": "application/json",
+  };
+
+  if (request) {
+    headers = {
+      ...headers,
+      Authorization: `Bearer ${await currentToken({ request })}`,
+      Cookie: request.headers.get("Cookie"),
+    };
+  }
+
+  return axios.create({
+    baseURL: environment().API_HOST,
+    headers,
+  });
+}
+```
+
+<Warning>
+  This is a server-side only module (`.server.ts`). Never import or use this in client-side code.
+</Warning>

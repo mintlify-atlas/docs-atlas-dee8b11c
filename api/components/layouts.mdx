@@ -1,0 +1,339 @@
+---
+title: 'Layout Components'
+description: 'Reference for layout components including Navbar, Footer, and RootLayout'
+---
+
+Layout components provide the structure and navigation for the Codante.io application.
+
+## RootLayout (AppLayout)
+
+Main application layout that wraps page content with navbar and footer.
+
+### Props
+
+<ParamField path="children" type="React.ReactNode" required>
+  Page content to render
+</ParamField>
+
+<ParamField path="user" type="User | null" required>
+  Current authenticated user or null if not logged in
+</ParamField>
+
+<ParamField path="hideNavbarLinks" type="boolean" default="false">
+  Hide navigation links (for minimal layouts)
+</ParamField>
+
+### Usage
+
+```tsx
+import AppLayout from "~/components/_layouts/root-layout";
+import type { User } from "~/lib/models/user.server";
+
+export default function MyPage() {
+  const { user } = useOutletContext<{ user: User | null }>();
+  
+  return (
+    <AppLayout user={user}>
+      <div className="container">
+        {/* Your page content */}
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+### Structure
+
+The layout renders:
+1. Upper alert banner portal (`#alert-banner-upper`)
+2. Navbar component
+3. Lower alert banner portal (`#alert-banner-lower`)
+4. Main content area with minimum height
+5. Footer component
+
+```tsx
+<>
+  <div id="alert-banner-upper"></div>
+  <Navbar user={user} hideLinks={hideNavbarLinks} />
+  <div id="alert-banner-lower"></div>
+  <main className="lg:py-10 py-6 min-h-[calc(100vh-170px)] mx-auto">
+    {children}
+  </main>
+  <Footer />
+</>
+```
+
+## Navbar
+
+Responsive navigation bar with mobile menu support.
+
+### Props
+
+<ParamField path="user" type="User | null" required>
+  Current authenticated user or null
+</ParamField>
+
+<ParamField path="hideLinks" type="boolean" default="false">
+  Hide navigation links
+</ParamField>
+
+### Features
+
+<CardGroup cols={2}>
+  <Card title="Desktop Navigation" icon="desktop">
+    - Logo with dark mode variants
+    - Main navigation links (Workshops, Mini Projetos, Agenda)
+    - "Seja PRO" button (hidden for PRO users)
+    - "Mais" dropdown menu with additional links
+    - Dark mode toggle
+    - Profile menu (authenticated) or Login link
+  </Card>
+  
+  <Card title="Mobile Navigation" icon="mobile">
+    - Animated hamburger menu
+    - Collapsible navigation panel
+    - All desktop links in vertical layout
+    - Dark mode toggle
+    - Smooth animations with Framer Motion
+  </Card>
+</CardGroup>
+
+### Navigation Items
+
+**Main Navigation:**
+```tsx
+const navigation = [
+  { name: "Workshops", href: "/workshops" },
+  { name: "Mini Projetos", href: "/mini-projetos" },
+  { name: "Agenda", href: "/agenda" },
+];
+```
+
+**More Menu:**
+```tsx
+const moreMenuNavigation = [
+  { name: "Planos e preços", href: "/planos", external: false },
+  { name: "Testes Técnicos", href: "/testes-tecnicos", external: false },
+  { name: "Ranking", href: "/ranking", external: false },
+  { name: "Blog", href: "/blog", external: false },
+  { name: "Codante APIs", href: "https://apis.codante.io/", external: true },
+];
+```
+
+### Usage Example
+
+```tsx
+import Navbar from "~/components/_layouts/navbar";
+
+<Navbar user={user} hideLinks={false} />
+```
+
+### Animations
+
+The navbar uses Framer Motion for smooth animations:
+- Animated hamburger icon that transforms to X
+- Slide-in mobile menu with fade effect
+- Sound effects on menu interactions
+
+### Dark Mode
+
+The navbar automatically adapts to the current color mode:
+```tsx
+const { colorMode } = useColorMode();
+
+{colorMode === "light" ? (
+  <img src="/cdnt-light.svg" alt="Codante" />
+) : (
+  <img src="/cdnt.svg" alt="Codante" />
+)}
+```
+
+## Footer
+
+Site footer with navigation links and social media.
+
+### Structure
+
+<Tabs>
+  <Tab title="Navigation Sections">
+    The footer is organized into 4 main columns:
+    
+    1. **Projetos** - Project links filtered by technology
+    2. **Workshops** - Workshop links filtered by technology
+    3. **Outros recursos** - Additional resources (APIs, guides, ranking)
+    4. **Empresa** - Company information (agenda, blog, pricing)
+  </Tab>
+  
+  <Tab title="Legal & Social">
+    Bottom section includes:
+    - Terms of Use link
+    - Privacy Policy link
+    - Copyright notice with CNPJ
+    - Social media links (Email, LinkedIn, Instagram, GitHub, YouTube)
+  </Tab>
+</Tabs>
+
+### Social Media Links
+
+The footer includes icons for:
+- Email: `mailto:contato@codante.io`
+- LinkedIn: Company profile
+- Instagram: `@codante.io`
+- GitHub: `github.com/codante-io`
+- YouTube: `@codante-io`
+
+### Usage
+
+```tsx
+import Footer from "~/components/_layouts/footer";
+
+<Footer />
+```
+
+### Styling
+
+```css
+bg-background-100 dark:bg-background-800 bg-opacity-80
+```
+
+The footer uses a semi-transparent background that adapts to dark mode.
+
+## Additional Layout Components
+
+### Wave
+
+Decorative wave SVG background element.
+
+```tsx
+import Wave from "~/components/_layouts/wave";
+
+<Wave />
+```
+
+### BackgroundBlur
+
+Blurred background effect component.
+
+```tsx
+import BackgroundBlur from "~/components/_layouts/background-blur";
+
+<BackgroundBlur />
+```
+
+### GoogleTagManager
+
+Google Tag Manager integration component.
+
+```tsx
+import GoogleTagManager from "~/components/_layouts/google-tag-manager";
+
+// In root layout
+<GoogleTagManager />
+```
+
+### MetaPixel
+
+Meta (Facebook) Pixel integration component.
+
+```tsx
+import MetaPixel from "~/components/_layouts/meta-pixel";
+
+// In root layout
+<MetaPixel />
+```
+
+## Layout Patterns
+
+### Standard Page Layout
+
+```tsx
+import { useOutletContext } from "react-router";
+import AppLayout from "~/components/_layouts/root-layout";
+import type { User } from "~/lib/models/user.server";
+
+export default function StandardPage() {
+  const { user } = useOutletContext<{ user: User | null }>();
+  
+  return (
+    <AppLayout user={user}>
+      <div className="container mx-auto px-4">
+        <h1>Page Title</h1>
+        {/* Page content */}
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+### Minimal Layout (No Nav Links)
+
+```tsx
+export default function PlayerPage() {
+  const { user } = useOutletContext<{ user: User | null }>();
+  
+  return (
+    <AppLayout user={user} hideNavbarLinks={true}>
+      <div className="w-full">
+        {/* Full-width video player */}
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+### Layout with Alert Banners
+
+```tsx
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
+
+export default function PageWithAlert() {
+  const { user } = useOutletContext<{ user: User | null }>();
+  
+  return (
+    <>
+      {createPortal(
+        <div className="bg-brand-500 text-white p-4 text-center">
+          Important announcement!
+        </div>,
+        document.getElementById('alert-banner-upper')!
+      )}
+      
+      <AppLayout user={user}>
+        {/* Page content */}
+      </AppLayout>
+    </>
+  );
+}
+```
+
+## Authentication Integration
+
+Layout components integrate with the authentication system:
+
+```tsx
+// In loader
+import { requireAuth } from "~/lib/services/auth.server";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const user = await requireAuth(request);
+  return { user };
+}
+
+// In component
+const { user } = useOutletContext<{ user: User }>();
+
+<AppLayout user={user}>
+  {/* Authenticated content */}
+</AppLayout>
+```
+
+For guest-only pages:
+```tsx
+import { requireGuest } from "~/lib/services/auth.server";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  await requireGuest(request);
+  return { user: null };
+}
+```

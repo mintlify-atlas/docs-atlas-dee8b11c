@@ -1,0 +1,540 @@
+---
+title: Authentication
+description: Implement authentication with OAuth (GitHub and Discord) in Codante.io
+---
+
+## Overview
+
+Codante.io uses server-side session-based authentication with support for:
+
+- **Email/Password** authentication
+- **GitHub OAuth** authentication
+- **Discord OAuth** authentication
+- **Password reset** functionality
+- **Session management** with secure cookies
+
+<Note>
+  All authentication logic runs server-side to ensure security. User tokens and sensitive data never reach the client.
+</Note>
+
+## Authentication Architecture
+
+Authentication is handled by several server-side services:
+
+```
+app/lib/services/
+├── auth.server.ts           # Core authentication functions
+├── github-auth.server.ts    # GitHub OAuth strategy
+├── discord-auth.server.ts   # Discord OAuth strategy
+└── axios.server.ts          # API client with auth headers
+```
+
+## Session Management
+
+Sessions are managed with cookie-based storage:
+
+```typescript app/lib/services/auth.server.ts
+import { createCookieSessionStorage } from "react-router";
+import { environment } from "~/lib/models/environment";
+
+export const sessionStorage = createCookieSessionStorage({
+  cookie: {
+    name: "codante_session",
+    secure: environment().NODE_ENV === "production",
+    secrets: [environment().SESSION_SECRET as string],
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30, // 30 days
+    httpOnly: true,
+  },
+});
+
+export const { getSession, commitSession, destroySession } = sessionStorage;
+```
+
+### Session Configuration
+
+- **Name**: `codante_session`
+- **Max Age**: 30 days
+- **Secure**: Only in production (HTTPS)
+- **HttpOnly**: Yes (prevents JavaScript access)
+- **SameSite**: Lax (CSRF protection)
+
+## Email/Password Authentication
+
+### Registration
+
+Register a new user account:
+
+```typescript app/lib/services/auth.server.ts
+export async function register({
+  request,
+  name,
+  email,
+  password,
+  passwordConfirmation,
+}: {
+  request: Request;
+  name: string;
+  email: string;
+  password: string;
+  passwordConfirmation: string;
+}) {
+  const axios = await createAxios(request);
+  
+  try {
+    await axios.post("/register", {
+      name,
+      email,
+      password,
+      password_confirmation: passwordConfirmation,
+    });
+  } catch (error: any) {
+    return { errors: error?.response?.data?.message };
+  }
+
+  // Auto-login after registration
+  return await login({
+    request,
+    email,
+    password,
+    redirectTo: "/?new-signup=true",
+  });
+}
+```
+
+### Login
+
+Authenticate an existing user:
+
+```typescript app/lib/services/auth.server.ts
+export async function login({
+  request,
+  email,
+  password,
+  redirectTo = "/",
+}: {
+  request: Request;
+  email: string;
+  password: string;
+  redirectTo?: string;
+}) {
+  const session = await sessionStorage.getSession(
+    request.headers.get("Cookie"),
+  );
+  const axios = await createAxios(request);
+
+  try {
+    const response = await axios.post("/login", { email, password });
+    
+    let userData: { token?: string } = {};
+    if (session.get("user")) {
+      userData = session.get("user");
+    }
+    userData.token = response.data.token;
+    session.set("user", userData);
+
+    return {
+      redirector: redirect(redirectTo, {
+        headers: {
+          "Set-Cookie": await sessionStorage.commitSession(session),
+        },
+      }),
+    };
+  } catch (error: any) {
+    return { errors: error?.response?.data?.message };
+  }
+}
+```
+
+### Logout
+
+Destroy the user session:
+
+```typescript app/lib/services/auth.server.ts
+export async function logout({
+  request,
+  redirectTo = "/login",
+}: {
+  request: Request;
+  redirectTo?: string;
+}) {
+  const session = await sessionStorage.getSession(
+    request.headers.get("Cookie"),
+  );
+
+  const user = session.get("user");
+
+  if (!user?.token) return redirect(redirectTo);
+  
+  const axios = await createAxios(request);
+  await axios.post("/logout");
+
+  return redirect(redirectTo, {
+    headers: {
+      "Set-Cookie": await sessionStorage.destroySession(session),
+    },
+  });
+}
+```
+
+## GitHub OAuth
+
+### Configuration
+
+GitHub OAuth is configured using `remix-auth` and `remix-auth-github`:
+
+```typescript app/lib/services/github-auth.server.ts
+import { Authenticator } from "remix-auth";
+import { GitHubStrategy } from "remix-auth-github";
+import { environment } from "~/lib/models/environment";
+import { createAxios } from "~/lib/services/axios.server";
+
+export const authenticator = new Authenticator<any>();
+
+const gitHubStrategy = new GitHubStrategy(
+  {
+    clientId: environment().GITHUB_ID as string,
+    clientSecret: environment().GITHUB_SECRET as string,
+    redirectURI: environment().GITHUB_CALLBACK_URL as string,
+  },
+  async ({ tokens }) => {
+    const axios = await createAxios();
+
+    const res = await axios.post("/github-login", {
+      github_token: tokens.accessToken(),
+    });
+    
+    return { 
+      token: res.data.token, 
+      is_new_signup: res.data.is_new_signup 
+    };
+  },
+);
+
+authenticator.use(gitHubStrategy);
+```
+
+### Environment Variables
+
+Required environment variables for GitHub OAuth:
+
+```bash
+GITHUB_ID=your-github-client-id
+GITHUB_SECRET=your-github-client-secret
+GITHUB_CALLBACK_URL=http://localhost:3000/auth/github/callback
+```
+
+### OAuth Flow
+
+<Steps>
+  <Step title="Initiate OAuth">
+    User clicks "Sign in with GitHub" button:
+    
+    ```tsx
+    <Button asChild>
+      <Link to="/auth/github">
+        Sign in with GitHub
+      </Link>
+    </Button>
+    ```
+  </Step>
+
+  <Step title="Redirect to GitHub">
+    The `/auth/github` route redirects to GitHub's authorization page.
+  </Step>
+
+  <Step title="GitHub callback">
+    GitHub redirects back to `/auth/github/callback` with authorization code:
+    
+    ```typescript app/routes/_layout-app/_auth/auth/github.callback/index.tsx
+    export async function loader({ request }: LoaderFunctionArgs) {
+      const redirectTo =
+        (await redirectToCookie.parse(request.headers.get("Cookie"))) ?? "/";
+
+      const userData = await authenticator.authenticate("github", request);
+
+      const session = await getSession(request.headers.get("cookie"));
+      session.set("user", { token: userData.token });
+      
+      const headers = new Headers({ 
+        "Set-Cookie": await commitSession(session) 
+      });
+
+      if (userData.is_new_signup) {
+        const url = new URL(redirectTo, environment().BASE_URL);
+        url.searchParams.append("new-signup", "true");
+        return redirect(url.toString(), { headers });
+      }
+      
+      return redirect(redirectTo, { headers });
+    }
+    ```
+  </Step>
+
+  <Step title="Session created">
+    User is logged in with a secure session cookie.
+  </Step>
+</Steps>
+
+### Redirect Cookie
+
+Preserve the intended destination during OAuth:
+
+```typescript app/lib/services/auth.server.ts
+export const redirectToCookie = createCookie("redirect-to", {
+  path: "/",
+  httpOnly: true,
+  sameSite: "lax",
+  maxAge: 60, // 1 minute
+  secure: environment().NODE_ENV === "production",
+});
+```
+
+## Discord OAuth
+
+Discord OAuth follows the same pattern as GitHub:
+
+```typescript app/lib/services/discord-auth.server.ts
+import { Authenticator } from "remix-auth";
+import { GitHubStrategy } from "remix-auth-github";
+
+export const authenticator = new Authenticator<any>();
+
+const gitHubStrategy = new GitHubStrategy(
+  {
+    clientId: environment().GITHUB_ID as string,
+    clientSecret: environment().GITHUB_SECRET as string,
+    redirectURI: environment().GITHUB_CALLBACK_URL as string,
+    scopes: ["user:email", "read:user"],
+  },
+  async (params) => {
+    const axios = await createAxios();
+
+    const res = await axios.post("/github-login", {
+      github_token: params.tokens.accessToken(),
+    });
+    
+    return { 
+      token: res.data.token, 
+      is_new_signup: res.data.is_new_signup 
+    };
+  },
+);
+
+authenticator.use(gitHubStrategy);
+```
+
+### Environment Variables
+
+```bash
+DISCORD_APP_CLIENT_ID=your-discord-client-id
+DISCORD_APP_SECRET=your-discord-secret
+```
+
+## Protected Routes
+
+### Require Authentication
+
+Protect routes that require login:
+
+```typescript
+import { requireAuth } from "~/lib/services/auth.server";
+import type { LoaderFunctionArgs } from "react-router";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  await requireAuth({ request }); // Redirects to /login if not authenticated
+  
+  // Load protected data
+  const userData = await fetchUserData(request);
+  return userData;
+}
+```
+
+Implementation:
+
+```typescript app/lib/services/auth.server.ts
+export async function requireAuth({ request }: { request: Request }) {
+  const token = await currentToken({ request });
+
+  if (!token) {
+    throw redirect("/login");
+  }
+}
+```
+
+### Require Guest
+
+Prevent authenticated users from accessing certain routes:
+
+```typescript
+import { requireGuest } from "~/lib/services/auth.server";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  await requireGuest({ request }); // Redirects to / if authenticated
+  
+  return {};
+}
+```
+
+Implementation:
+
+```typescript app/lib/services/auth.server.ts
+export async function requireGuest({ request }: { request: Request }) {
+  if (await user({ request })) {
+    throw redirect("/");
+  }
+}
+```
+
+## Get Current User
+
+Retrieve the authenticated user:
+
+```typescript app/lib/services/auth.server.ts
+export async function user({
+  request,
+}: {
+  request: Request;
+}): Promise<User | null> {
+  const axios = await createAxios(request);
+
+  try {
+    const response = await axios.get<User>("/user");
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 401) {
+      return null;
+    }
+    return null;
+  }
+}
+```
+
+## User Context
+
+Access user data in components via outlet context:
+
+```tsx
+import { useOutletContext } from "react-router";
+import type { User } from "~/lib/models/user.server";
+
+export default function MyComponent() {
+  const { user } = useOutletContext<{ user: User }>();
+  
+  if (!user) {
+    return <div>Please log in</div>;
+  }
+  
+  return <div>Hello, {user.name}!</div>;
+}
+```
+
+## Password Reset
+
+### Request Reset Link
+
+```typescript app/lib/services/auth.server.ts
+export async function sendPasswordLink({ email }: { email: string }) {
+  const axios = await createAxios();
+
+  try {
+    await axios.post("/forgot-password", { email });
+  } catch (error: any) {
+    return { errors: Object.values(error?.response?.data?.errors).flat() };
+  }
+}
+```
+
+### Reset Password
+
+```typescript app/lib/services/auth.server.ts
+export async function resetPassword({
+  token,
+  email,
+  password,
+  passwordConfirmation,
+}: {
+  token: string;
+  email: string;
+  password: string;
+  passwordConfirmation: string;
+}) {
+  const axios = await createAxios();
+
+  try {
+    await axios.post("/reset-password", {
+      token,
+      email,
+      password,
+      password_confirmation: passwordConfirmation,
+    });
+  } catch (error: any) {
+    return { errors: Object.values(error?.response?.data?.errors).flat() };
+  }
+
+  return {
+    redirector: redirect("/login"),
+  };
+}
+```
+
+## Best Practices
+
+<Steps>
+  <Step title="Always use server-side authentication">
+    Never handle authentication logic on the client. Keep all auth code in `.server.ts` files.
+  </Step>
+
+  <Step title="Validate environment variables">
+    Use Zod validation to ensure all required OAuth credentials are configured:
+    
+    ```typescript
+    environment().GITHUB_ID // Validates at runtime
+    ```
+  </Step>
+
+  <Step title="Handle OAuth errors gracefully">
+    Implement error boundaries and proper error handling for OAuth failures.
+  </Step>
+
+  <Step title="Use secure session cookies">
+    Always use `httpOnly`, `secure` (in production), and `sameSite` flags on session cookies.
+  </Step>
+
+  <Step title="Implement CSRF protection">
+    Use `sameSite: "lax"` on cookies to prevent CSRF attacks.
+  </Step>
+</Steps>
+
+## Security Considerations
+
+<Warning>
+  Never expose OAuth secrets or session secrets in client-side code. All sensitive credentials must remain server-side.
+</Warning>
+
+- **Session Secret**: Use a strong, randomly generated secret
+- **HTTPS Only**: Enable `secure` cookies in production
+- **Token Storage**: Store tokens server-side, never in localStorage
+- **CSRF Protection**: SameSite cookies provide CSRF protection
+- **Session Expiry**: Sessions expire after 30 days
+
+## Testing Authentication
+
+### Local Development
+
+1. Set up OAuth apps on GitHub/Discord
+2. Configure callback URLs to `http://localhost:3000`
+3. Add credentials to `.env`
+4. Test the complete OAuth flow
+
+### Production Deployment
+
+1. Update callback URLs to production domain
+2. Enable secure cookies (`NODE_ENV=production`)
+3. Use HTTPS for all OAuth redirects
+
+## Next Steps
+
+- [Routing](/development/routing) - Learn about protected route patterns
+- [Components](/development/components) - Build authentication UI components

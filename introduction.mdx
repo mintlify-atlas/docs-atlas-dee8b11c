@@ -1,0 +1,144 @@
+---
+title: Introduction to Codante.io
+description: Learn about Codante.io, a Brazilian programming education platform helping developers master modern frontend development through hands-on projects and workshops
+---
+
+# Welcome to Codante.io
+
+Codente.io is an **open-source programming education platform** focused on helping developers master modern frontend technologies through practical, hands-on learning.
+
+<Note>
+Codente means "coding" in Portuguese. The platform is designed for Brazilian developers but the codebase and architecture can be adapted for any education platform.
+</Note>
+
+## What is Codante.io?
+
+Codente.io provides a unique learning experience that combines:
+
+- **Mini Projetos (Challenges)** - Practical coding challenges with real-world requirements
+- **Workshops** - Complete courses on specific frontend technologies
+- **Community** - A supportive community of developers learning together
+- **Certification** - Official certificates for PRO members who complete workshops
+
+<CardGroup cols={2}>
+  <Card title="Hands-on Learning" icon="code">
+    Build real projects with actual requirements, Figma designs, and deployment guidelines - just like in a professional environment.
+  </Card>
+  
+  <Card title="Modern Stack" icon="react">
+    Learn with cutting-edge technologies: React Router v7, TailwindCSS v4, TypeScript, and more.
+  </Card>
+  
+  <Card title="Active Community" icon="users">
+    Join a thriving community with Discord integration, project submissions, and peer feedback.
+  </Card>
+  
+  <Card title="Professional Quality" icon="star">
+    High-quality 4K video workshops, professionally designed projects, and production-ready code.
+  </Card>
+</CardGroup>
+
+## Platform Features
+
+### Mini Projetos (Challenges)
+
+Mini Projetos are hands-on coding challenges that simulate real-world development scenarios:
+
+1. **Requirements** - Each project includes detailed requirements like a product manager would provide
+2. **Figma Designs** - Complete design systems with colors, typography, and components
+3. **Backend APIs** - Connect to our APIs at [apis.codante.io](https://apis.codante.io) or build your own
+4. **Deployment** - Deploy to Vercel, Netlify, or your preferred hosting service
+5. **Submissions** - Share your solution and get feedback from the community
+6. **Official Solutions** - Access detailed video explanations and source code
+
+<Info>
+The platform already has over **thousands of user submissions** from the community, creating a rich gallery of solutions and learning resources.
+</Info>
+
+### Workshops
+
+Workshops are comprehensive courses on specific frontend topics:
+
+- Live streamed from a professional studio in Ribeirão Preto, Brazil
+- Professionally edited and available in 4K quality
+- Theory combined with practical exercises
+- PRO members receive certificates upon completion
+- Topics cover the latest frontend technologies and best practices
+
+### Community & Social Features
+
+- **Discord Integration** - Active Discord community with exclusive PRO channels
+- **User Submissions** - Gallery of community solutions with voting and comments
+- **Reactions & Comments** - Engage with content and other learners
+- **User Profiles** - Track progress and showcase completed projects
+
+## Technology Stack
+
+Codente.io is built with modern web technologies:
+
+<CardGroup cols={2}>
+  <Card title="React Router v7" icon="route">
+    Built on React Router v7 (formerly Remix), providing server-side rendering, optimized data loading, and modern routing patterns.
+  </Card>
+  
+  <Card title="TailwindCSS v4" icon="palette">
+    Styled with TailwindCSS v4 featuring a custom design system, dark mode support, and responsive layouts.
+  </Card>
+  
+  <Card title="TypeScript" icon="code">
+    Fully typed codebase with TypeScript 5.9+ ensuring type safety across the entire application.
+  </Card>
+  
+  <Card title="Radix UI" icon="components">
+    Accessible UI components built with Radix UI primitives and enhanced with Framer Motion animations.
+  </Card>
+</CardGroup>
+
+### Core Technologies
+
+- **Framework**: React Router v7 with Vite
+- **React**: 19.2+
+- **TypeScript**: 5.9+
+- **Styling**: TailwindCSS v4 with custom design system
+- **UI Components**: Radix UI primitives + custom components
+- **Animations**: Framer Motion
+- **State Management**: React contexts (ColorModeProvider, auth via outlet context)
+- **Backend Integration**: Axios with server-side session management
+- **Authentication**: GitHub/Discord OAuth with server-side sessions
+
+### External Integrations
+
+- **GitHub & Discord OAuth** for authentication
+- **Vimeo Player** for video content delivery
+- **reCAPTCHA** for form protection
+- **Crisp** for customer support
+- **Google Tag Manager** for analytics
+- **Stripe** for payment processing
+
+## Architecture Highlights
+
+The platform features a sophisticated architecture designed for scalability and developer experience:
+
+- **Multiple Layout Systems** - Dedicated layouts for app, player, landing page, and API routes
+- **Server-Side Rendering** - Optimized SSR with prefetch caching
+- **Route-Based Code Splitting** - Automatic code splitting for optimal performance
+- **Type-Safe Environment Variables** - Zod validation for all environment configuration
+- **Accessibility First** - Built with Radix UI primitives for WCAG compliance
+
+<Warning>
+This is a production application serving real users. When exploring the codebase, be mindful of sensitive data and environment variables.
+</Warning>
+
+## Getting Started
+
+Ready to dive in? Check out the [Quickstart Guide](/quickstart) to set up your local development environment, or explore the [Architecture](/architecture) documentation to understand the system design.
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get your local development environment up and running in minutes.
+  </Card>
+  
+  <Card title="Architecture" icon="sitemap" href="/architecture">
+    Understand the technical architecture and design patterns used throughout the application.
+  </Card>
+</CardGroup>

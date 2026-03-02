@@ -1,0 +1,485 @@
+---
+title: 'Feature Components'
+description: 'Reference for feature-specific components including authentication, comments, and reactions'
+---
+
+Feature components provide specialized functionality for specific application features.
+
+## Authentication Components
+
+### DiscordButton
+
+OAuth button for Discord authentication.
+
+<ParamField path="className" type="string" default="">
+  Additional CSS classes
+</ParamField>
+
+<ParamField path="onlyWrapper" type="boolean" default="false">
+  If true, renders only the anchor wrapper without button styles
+</ParamField>
+
+<ParamField path="children" type="React.ReactNode">
+  Custom button content (defaults to Discord icon + "Entrar na Comunidade")
+</ParamField>
+
+```tsx
+import DiscordButton from "~/components/features/auth/discord-button";
+
+// Default usage
+<DiscordButton />
+
+// Custom content
+<DiscordButton className="w-full">
+  <BsDiscord className="w-4 h-4 mr-2" />
+  <span>Join Discord</span>
+</DiscordButton>
+
+// As wrapper only
+<DiscordButton onlyWrapper className="custom-link">
+  <CustomButton>Connect Discord</CustomButton>
+</DiscordButton>
+```
+
+**OAuth Flow:**
+The component automatically constructs the Discord OAuth URL with:
+- Client ID: `1185302801178439780`
+- Redirect URI: `{BASE_URL}/auth/discord/callback`
+- Scopes: `identify guilds.join email`
+
+### LinkToLoginWithRedirect
+
+Link to login page with automatic redirect after authentication.
+
+```tsx
+import LinkToLoginWithRedirect from "~/components/features/link-to-login-with-redirect";
+
+<LinkToLoginWithRedirect className="text-brand-500">
+  Login <BsArrowRight />
+</LinkToLoginWithRedirect>
+```
+
+This component automatically captures the current path and includes it as a `redirectTo` parameter.
+
+## Comment System
+
+### CommentSection
+
+Complete comment section with replies, editing, and deletion.
+
+<ParamField path="comments" type="Comment[]" required>
+  Array of comment objects
+</ParamField>
+
+<ParamField path="commentableId" type="string | number" required>
+  ID of the resource being commented on
+</ParamField>
+
+<ParamField path="commentableType" type="'ChallengeUser' | 'Lesson'" required>
+  Type of resource being commented on
+</ParamField>
+
+<ParamField path="redirectTo" type="string" required>
+  URL to redirect to after login (if not authenticated)
+</ParamField>
+
+```tsx
+import CommentSection from "~/components/features/comments/comment-section";
+import type { Comment } from "~/lib/models/comments.server";
+
+export default function LessonPage({ comments, lesson }) {
+  return (
+    <div>
+      {/* Lesson content */}
+      
+      <CommentSection
+        comments={comments}
+        commentableId={lesson.id}
+        commentableType="Lesson"
+        redirectTo={`/workshops/${lesson.slug}`}
+      />
+    </div>
+  );
+}
+```
+
+### Features
+
+<CardGroup cols={2}>
+  <Card title="Comment Thread" icon="comments">
+    - Nested replies support
+    - Markdown formatting
+    - User avatars with badges
+    - Timestamp display
+  </Card>
+  
+  <Card title="Interactions" icon="pencil">
+    - Reply to comments
+    - Edit own comments
+    - Delete own comments
+    - Optimistic UI updates
+  </Card>
+</CardGroup>
+
+### Comment Object Structure
+
+```typescript
+interface Comment {
+  id: string;
+  comment: string;
+  commentable_id: number | string;
+  user: {
+    id: string;
+    name: string;
+    avatar: UserAvatar;
+  };
+  created_at_human: string;
+  replying_to?: string | null;
+}
+```
+
+### Keyboard Shortcuts
+
+- `Cmd/Ctrl + Enter` - Submit comment
+- `Escape` - Cancel reply/edit
+
+### Toast Notifications
+
+The component shows toast notifications for:
+- Loading: "Enviando comentário..."
+- Success: "Comentário enviado!"
+- Edit: "Editando comentário..." → "Comentário editado!"
+- Delete: "Deletando comentário..." → "Comentário deletado!"
+
+### Markdown Support
+
+Comments support markdown formatting:
+```markdown
+**bold text**
+*italic text*
+[link text](url)
+`inline code`
+```
+
+## Reactions System
+
+### ReactionsButton
+
+Interactive reaction button with emoji picker popover.
+
+<ParamField path="reactions" type="Reactions" required>
+  Reactions object containing counts and user reactions
+</ParamField>
+
+<ParamField path="reactableType" type="string" required>
+  Type of resource being reacted to
+</ParamField>
+
+<ParamField path="reactableId" type="number" required>
+  ID of the resource being reacted to
+</ParamField>
+
+<ParamField path="readOnly" type="boolean" default="false">
+  Disable interactions (display only)
+</ParamField>
+
+<ParamField path="className" type="string" default="">
+  Additional CSS classes
+</ParamField>
+
+<ParamField path="side" type="'top' | 'right'" default="top">
+  Popover position
+</ParamField>
+
+<ParamField path="iconSize" type="string" default="text-xl">
+  Icon size class
+</ParamField>
+
+```tsx
+import ReactionsButton from "~/components/features/reactions/reactions-button";
+import type { Reactions } from "~/lib/models/reactions.server";
+
+const reactions: Reactions = {
+  reaction_counts: [
+    { reaction: "like", count: 5 },
+    { reaction: "fire", count: 3 },
+  ],
+  user_reactions: ["like"],
+};
+
+<ReactionsButton
+  reactions={reactions}
+  reactableType="ChallengeUser"
+  reactableId={submission.id}
+  side="top"
+  iconSize="text-2xl"
+/>
+```
+
+### Available Reactions
+
+<CardGroup cols={4}>
+  <Card title="Rocket" icon="rocket">
+    `rocket` - Impressive work
+  </Card>
+  <Card title="Fire" icon="fire">
+    `fire` - Amazing content
+  </Card>
+  <Card title="Exploding Head" icon="face-grin-stars">
+    `exploding-head` - Mind blown
+  </Card>
+  <Card title="Like" icon="heart">
+    `like` - General approval
+  </Card>
+</CardGroup>
+
+### Reactions Object Structure
+
+```typescript
+type AllowedReaction = "rocket" | "fire" | "exploding-head" | "like";
+
+interface Reactions {
+  reaction_counts: Array<{
+    reaction: AllowedReaction;
+    count: number;
+  }>;
+  user_reactions: AllowedReaction[];
+}
+```
+
+### Optimistic Updates
+
+The component uses optimistic UI updates for instant feedback:
+```tsx
+const optimisticToggleReaction = (reaction: AllowedReaction) => {
+  if (localUserReacted.includes(reaction)) {
+    // Remove reaction
+    setTotalReactions((prev) => prev! - 1);
+    setLocalReactions((prev) => ({
+      ...prev,
+      [reaction]: (prev[reaction] || 0) - 1,
+    }));
+  } else {
+    // Add reaction
+    setTotalReactions((prev) => prev! + 1);
+    setLocalReactions((prev) => ({
+      ...prev,
+      [reaction]: (prev[reaction] || 0) + 1,
+    }));
+  }
+};
+```
+
+### Sound Effects
+
+Reactions play a "pop" sound effect on interaction for better UX.
+
+## Form Components
+
+### LoadingButton
+
+Button with loading and success states.
+
+<ParamField path="status" type="'idle' | 'loading' | 'submitting'" required>
+  Current button state
+</ParamField>
+
+<ParamField path="isSuccessfulSubmission" type="boolean" default="false">
+  Show success checkmark
+</ParamField>
+
+<ParamField path="size" type="ButtonSize" default="default">
+  Button size variant
+</ParamField>
+
+```tsx
+import LoadingButton from "~/components/features/form/loading-button";
+import { useNavigation } from "react-router";
+
+export default function MyForm() {
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting";
+  
+  return (
+    <Form method="post">
+      <Input name="email" type="email" />
+      
+      <LoadingButton 
+        type="submit"
+        status={isSubmitting ? "submitting" : "idle"}
+        size="lg"
+      >
+        Submit Form
+      </LoadingButton>
+    </Form>
+  );
+}
+```
+
+### Button States
+
+<Tabs>
+  <Tab title="Idle">
+    Normal button state, clickable and showing button text.
+  </Tab>
+  
+  <Tab title="Loading/Submitting">
+    Shows spinning loader icon, button disabled.
+    ```tsx
+    <CgSpinner className="w-5 h-5 animate-spin" />
+    ```
+  </Tab>
+  
+  <Tab title="Success">
+    Shows green checkmark icon, button disabled.
+    ```tsx
+    <CheckIcon className="w-5" />
+    ```
+  </Tab>
+</Tabs>
+
+## Workshop Components
+
+### WorkshopLessonsHeader
+
+Header for workshop lesson pages.
+
+```tsx
+import WorkshopLessonsHeader from "~/components/features/workshop/workshop-lessons-header";
+
+<WorkshopLessonsHeader workshop={workshop} currentLesson={lesson} />
+```
+
+### LessonsList
+
+List of lessons in a workshop.
+
+```tsx
+import LessonsList from "~/components/features/workshop/lessons-list";
+
+<LessonsList 
+  lessons={workshop.lessons}
+  currentLessonId={currentLesson.id}
+/>
+```
+
+### NextLessonPreview
+
+Preview card for the next lesson.
+
+```tsx
+import NextLessonPreview from "~/components/features/workshop/next-lesson-preview";
+
+<NextLessonPreview 
+  nextLesson={nextLesson}
+  workshopSlug={workshop.slug}
+/>
+```
+
+## Submission Components
+
+### SubmissionCard
+
+Card displaying user submission for challenges.
+
+```tsx
+import { SubmissionCard } from "~/components/features/submission-card/submission-card";
+
+<SubmissionCard
+  submission={submission}
+  showReactions={true}
+  showComments={true}
+/>
+```
+
+### ChallengeSubmissionCard
+
+Specialized submission card for challenge pages.
+
+```tsx
+import { ChallengeSubmissionCard } from "~/components/features/submission-card/challenge-submission-card";
+
+<ChallengeSubmissionCard
+  submission={submission}
+  challenge={challenge}
+/>
+```
+
+## Error Handling Components
+
+### NotFound
+
+404 error page component.
+
+```tsx
+import NotFound from "~/components/features/error-handling/not-found";
+
+export default function NotFoundPage() {
+  return <NotFound />;
+}
+```
+
+### 500 Error
+
+500 error page component.
+
+```tsx
+import Error500 from "~/components/features/error-handling/500";
+
+export default function ErrorPage() {
+  return <Error500 />;
+}
+```
+
+## Best Practices
+
+### Authentication Required Features
+
+Always check for user authentication before rendering interactive features:
+
+```tsx
+import { useOutletContext } from "react-router";
+import type { User } from "~/lib/models/user.server";
+
+export default function MyPage() {
+  const { user } = useOutletContext<{ user: User | null }>();
+  
+  return (
+    <div>
+      {user ? (
+        <CommentSection {...props} />
+      ) : (
+        <Button onClick={() => navigate("/login")}>
+          Login to Comment
+        </Button>
+      )}
+    </div>
+  );
+}
+```
+
+### Optimistic UI Updates
+
+Use optimistic updates for better UX with immediate feedback:
+
+```tsx
+const handleReaction = async (reaction) => {
+  // Update UI immediately
+  setLocalReaction(reaction);
+  
+  // Submit to server
+  fetcher.submit({ reaction }, { method: "post" });
+};
+```
+
+### Error Handling
+
+Always handle errors gracefully with user-friendly messages:
+
+```tsx
+useEffect(() => {
+  if (fetcher.data?.error) {
+    toast.error(fetcher.data.error);
+  }
+}, [fetcher.data]);
+```

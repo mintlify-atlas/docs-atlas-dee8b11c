@@ -1,0 +1,311 @@
+---
+title: 'Environment Variables'
+description: 'Configure environment variables for Codante.io deployment'
+---
+
+## Overview
+
+Codante.io uses environment variables for configuration management. All environment variables are validated using Zod schemas to ensure type safety and prevent runtime errors.
+
+## Environment Validation
+
+Environment variables are validated in `app/lib/models/environment.ts` using Zod:
+
+```typescript
+const environmentSchema = z.object({
+  NODE_ENV: z
+    .enum(["development", "production", "test"])
+    .default("development"),
+  SESSION_SECRET: z.string().min(1),
+  API_HOST: z.string().min(1),
+  BASE_URL: z.string().min(1),
+  GITHUB_ID: z.string().min(1),
+  GITHUB_SECRET: z.string().min(1),
+  GITHUB_CALLBACK_URL: z.string().min(1),
+  DISCORD_APP_CLIENT_ID: z.string().min(1),
+  DISCORD_APP_SECRET: z.string().min(1),
+  RECAPTCHA_SITE_KEY: z.string().min(1),
+  RECAPTCHA_SECRET_KEY: z.string().min(1),
+});
+```
+
+<Note>
+The `environment()` helper function validates all environment variables at runtime. Missing or invalid variables will cause the application to fail fast with detailed error messages.
+</Note>
+
+## Required Environment Variables
+
+### Core Configuration
+
+<ParamField path="NODE_ENV" type="enum" required>
+  Application environment mode.
+  
+  **Allowed values**: `development`, `production`, `test`
+  
+  **Default**: `development`
+  
+  ```bash
+  NODE_ENV=production
+  ```
+</ParamField>
+
+<ParamField path="SESSION_SECRET" type="string" required>
+  Secret key for session encryption. Must be a strong, random string.
+  
+  **Security**: Use a cryptographically secure random string (minimum 32 characters)
+  
+  ```bash
+  SESSION_SECRET=your-super-secret-session-key-min-32-chars
+  ```
+</ParamField>
+
+<ParamField path="API_HOST" type="string" required>
+  Backend API server URL.
+  
+  ```bash
+  API_HOST=https://api.codante.io
+  ```
+</ParamField>
+
+<ParamField path="BASE_URL" type="string" required>
+  Public-facing URL of your application.
+  
+  ```bash
+  BASE_URL=https://codante.io
+  ```
+</ParamField>
+
+### GitHub OAuth
+
+<ParamField path="GITHUB_ID" type="string" required>
+  GitHub OAuth application client ID.
+  
+  Obtain from: [GitHub Developer Settings](https://github.com/settings/developers)
+  
+  ```bash
+  GITHUB_ID=your_github_client_id
+  ```
+</ParamField>
+
+<ParamField path="GITHUB_SECRET" type="string" required>
+  GitHub OAuth application client secret.
+  
+  ```bash
+  GITHUB_SECRET=your_github_client_secret
+  ```
+</ParamField>
+
+<ParamField path="GITHUB_CALLBACK_URL" type="string" required>
+  GitHub OAuth callback URL. Must match the URL configured in your GitHub OAuth app.
+  
+  ```bash
+  GITHUB_CALLBACK_URL=https://codante.io/auth/github/callback
+  ```
+</ParamField>
+
+### Discord OAuth
+
+<ParamField path="DISCORD_APP_CLIENT_ID" type="string" required>
+  Discord OAuth application client ID.
+  
+  Obtain from: [Discord Developer Portal](https://discord.com/developers/applications)
+  
+  ```bash
+  DISCORD_APP_CLIENT_ID=your_discord_client_id
+  ```
+</ParamField>
+
+<ParamField path="DISCORD_APP_SECRET" type="string" required>
+  Discord OAuth application client secret.
+  
+  ```bash
+  DISCORD_APP_SECRET=your_discord_client_secret
+  ```
+</ParamField>
+
+### reCAPTCHA
+
+<ParamField path="RECAPTCHA_SITE_KEY" type="string" required>
+  Google reCAPTCHA v3 site key (public).
+  
+  Obtain from: [Google reCAPTCHA Admin](https://www.google.com/recaptcha/admin)
+  
+  ```bash
+  RECAPTCHA_SITE_KEY=your_recaptcha_site_key
+  ```
+</ParamField>
+
+<ParamField path="RECAPTCHA_SECRET_KEY" type="string" required>
+  Google reCAPTCHA v3 secret key (private).
+  
+  ```bash
+  RECAPTCHA_SECRET_KEY=your_recaptcha_secret_key
+  ```
+</ParamField>
+
+## Environment Files
+
+### Development Environment
+
+Create a `.env` file in the project root:
+
+```bash
+# .env (development)
+NODE_ENV=development
+SESSION_SECRET=dev-secret-key-change-in-production
+API_HOST=http://localhost:8000
+BASE_URL=http://localhost:3000
+
+# GitHub OAuth
+GITHUB_ID=your_dev_github_id
+GITHUB_SECRET=your_dev_github_secret
+GITHUB_CALLBACK_URL=http://localhost:3000/auth/github/callback
+
+# Discord OAuth
+DISCORD_APP_CLIENT_ID=your_dev_discord_id
+DISCORD_APP_SECRET=your_dev_discord_secret
+
+# reCAPTCHA
+RECAPTCHA_SITE_KEY=your_recaptcha_site_key
+RECAPTCHA_SECRET_KEY=your_recaptcha_secret_key
+```
+
+### Production Environment
+
+Create a `.env.production` file for production:
+
+```bash
+# .env.production
+NODE_ENV=production
+SESSION_SECRET=your-production-secret-key-min-32-chars
+API_HOST=https://api.codante.io
+BASE_URL=https://codante.io
+
+# GitHub OAuth
+GITHUB_ID=your_prod_github_id
+GITHUB_SECRET=your_prod_github_secret
+GITHUB_CALLBACK_URL=https://codante.io/auth/github/callback
+
+# Discord OAuth
+DISCORD_APP_CLIENT_ID=your_prod_discord_id
+DISCORD_APP_SECRET=your_prod_discord_secret
+
+# reCAPTCHA
+RECAPTCHA_SITE_KEY=your_recaptcha_site_key
+RECAPTCHA_SECRET_KEY=your_recaptcha_secret_key
+```
+
+<Warning>
+Never commit `.env` or `.env.production` files to version control. Add them to `.gitignore`.
+</Warning>
+
+## Loading Environment Variables
+
+The application uses `dotenv-cli` to load environment variables:
+
+```json
+"start": "dotenv -e .env.production react-router-serve ./build/server/index.js"
+```
+
+This ensures `.env.production` is loaded when running the production server.
+
+## Environment Variable Usage
+
+Access validated environment variables in your code:
+
+```typescript
+import { environment } from "~/lib/models/environment";
+
+export async function loader() {
+  const env = environment();
+  
+  // All variables are type-safe and validated
+  const apiHost = env.API_HOST;
+  const sessionSecret = env.SESSION_SECRET;
+  
+  // ...
+}
+```
+
+## Security Best Practices
+
+<Steps>
+  <Step title="Strong Secrets">
+    Use cryptographically secure random strings for `SESSION_SECRET`:
+    
+    ```bash
+    # Generate a secure secret (Linux/Mac)
+    openssl rand -base64 32
+    ```
+  </Step>
+
+  <Step title="Environment Separation">
+    Use different OAuth applications and secrets for development and production environments.
+  </Step>
+
+  <Step title="Secret Management">
+    For production deployments, consider using:
+    - Environment variables in hosting platform (Heroku, Vercel, etc.)
+    - Secret management services (AWS Secrets Manager, HashiCorp Vault)
+    - Encrypted secrets in CI/CD pipelines
+  </Step>
+
+  <Step title="Never Commit Secrets">
+    Ensure `.env*` files are in `.gitignore`:
+    
+    ```gitignore
+    .env
+    .env.local
+    .env.production
+    .env.*.local
+    ```
+  </Step>
+</Steps>
+
+## Validation Errors
+
+If environment variables are missing or invalid, the application will fail with a Zod validation error:
+
+```bash
+ZodError: [
+  {
+    "code": "too_small",
+    "minimum": 1,
+    "type": "string",
+    "inclusive": true,
+    "exact": false,
+    "message": "String must contain at least 1 character(s)",
+    "path": ["SESSION_SECRET"]
+  }
+]
+```
+
+<Note>
+Validation errors prevent the application from starting with invalid configuration, ensuring fail-fast behavior.
+</Note>
+
+## Troubleshooting
+
+### Missing Environment Variables
+
+If you see validation errors, ensure all required variables are defined:
+
+```bash
+# Check which variables are set
+env | grep -E '(SESSION_SECRET|API_HOST|GITHUB|DISCORD|RECAPTCHA)'
+```
+
+### OAuth Callback Mismatches
+
+Ensure OAuth callback URLs match exactly:
+- GitHub: Settings → Developer settings → OAuth Apps → Update callback URL
+- Discord: Developer Portal → OAuth2 → Redirects → Add redirect URL
+
+### Production Server Not Starting
+
+Verify `.env.production` exists and contains all required variables:
+
+```bash
+# Test environment loading
+dotenv -e .env.production -- node -e "console.log(process.env.SESSION_SECRET)"
+```

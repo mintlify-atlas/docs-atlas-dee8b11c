@@ -1,0 +1,500 @@
+---
+title: 'Certificates'
+description: 'Earn and share professional certificates for completed courses and challenges'
+---
+
+## Overview
+
+Codeante.io provides professional certificates for completed workshops and challenges. Certificates validate your learning achievements and can be shared on LinkedIn, portfolios, and resumes.
+
+<CardGroup cols={2}>
+  <Card title="Request Certificate" icon="certificate" href="#requesting-certificates">
+    Earn certificates for completions
+  </Card>
+  <Card title="View Certificates" icon="file-certificate" href="/certificados">
+    Access your certificate collection
+  </Card>
+</CardGroup>
+
+## Certificate Structure
+
+```typescript
+type Certificate = {
+  id: string;
+  user: User;
+  certifiable_type: "ChallengeUser" | "WorkshopUser";
+  certifiable_id: string;
+  certifiable: Certifiable;
+  status: "pending" | "published";
+  metadata: CertificateMetadata;
+  created_at: string;
+  error?: any;
+}
+```
+
+### Certificate Types
+
+<Tabs>
+  <Tab title="Challenge Certificates">
+    Awarded for completing coding challenges (mini-projetos).
+    
+    ```typescript
+    certifiable_type: "ChallengeUser"
+    
+    type ChallengeUserMetadata = {
+      tags: string[];
+      end_date: string;
+      start_date: string;
+      certifiable_source_name: string;
+      certifiable_slug: string;
+    }
+    ```
+    
+    <Info>
+    Challenge certificates include the technologies used and completion date range.
+    </Info>
+  </Tab>
+  
+  <Tab title="Workshop Certificates">
+    Issued for completed video workshops and courses.
+    
+    ```typescript
+    certifiable_type: "WorkshopUser"
+    
+    type WorkshopUserMetadata = {
+      end_date: string;
+      certifiable_slug: string;
+      duration_in_seconds: string;
+      certifiable_source_name: string;
+    }
+    ```
+    
+    <Note>
+    Workshop certificates display total duration and completion date.
+    </Note>
+  </Tab>
+</Tabs>
+
+## Certificate Metadata
+
+Certificates contain rich metadata for validation:
+
+```typescript
+type CertificateMetadata = ChallengeUserMetadata | WorkshopUserMetadata;
+```
+
+### Common Fields
+
+- **certifiable_source_name**: Title of the challenge or workshop
+- **certifiable_slug**: Unique identifier for the content
+- **end_date**: Completion date
+- **start_date**: When you began (challenges only)
+
+### Challenge-Specific Fields
+
+```typescript
+tags: string[];  // Technologies and frameworks used
+```
+
+<CardGroup cols={4}>
+  <Card title="React" icon="react">
+    Frontend framework
+  </Card>
+  <Card title="TypeScript" icon="code">
+    Programming language
+  </Card>
+  <Card title="Node.js" icon="node-js">
+    Backend runtime
+  </Card>
+  <Card title="Tailwind" icon="paintbrush">
+    CSS framework
+  </Card>
+</CardGroup>
+
+### Workshop-Specific Fields
+
+```typescript
+duration_in_seconds: string;  // Total workshop duration
+```
+
+## Requesting Certificates
+
+Certificates must be requested after completing content:
+
+```typescript
+await requestCertificate(
+  request,
+  certifiable_type,
+  certifiable_id
+);
+```
+
+<Steps>
+  <Step title="Complete Content">
+    Finish all requirements for the challenge or workshop
+    
+    **For Challenges:**
+    - Join the challenge
+    - Fork the repository
+    - Submit your solution
+    - Mark as completed
+    
+    **For Workshops:**
+    - Watch all lessons
+    - Complete associated exercises
+    - Status marked as "completed"
+  </Step>
+  
+  <Step title="Request Certificate">
+    Click the certificate request button on the completion page
+    
+    ```typescript
+    certifiable_type: "ChallengeUser" | "WorkshopUser"
+    certifiable_id: string;  // Your user association ID
+    ```
+  </Step>
+  
+  <Step title="Certificate Generation">
+    Certificate is generated and status updates from "pending" to "published"
+    
+    ```typescript
+    status: "pending" | "published"
+    ```
+  </Step>
+</Steps>
+
+## Certificate Status
+
+<Tabs>
+  <Tab title="Pending">
+    Certificate request received and being processed.
+    
+    ```typescript
+    status: "pending"
+    ```
+    
+    <Info>
+    Most certificates are generated immediately, but some may require brief processing time.
+    </Info>
+  </Tab>
+  
+  <Tab title="Published">
+    Certificate is ready to view and share.
+    
+    ```typescript
+    status: "published"
+    ```
+    
+    <Note>
+    Published certificates are available in your certificates dashboard.
+    </Note>
+  </Tab>
+</Tabs>
+
+## Accessing Certificates
+
+### By Challenge Slug
+
+```typescript
+await getCertificateBySlug(request, slug);
+// Returns: Certificate for specific challenge
+```
+
+### By Certificate ID
+
+```typescript
+await getCertificateById(id);
+// Returns: Full certificate object
+```
+
+<Info>
+Certificates can be accessed via direct URL: `/certificates/{certificate-id}`
+</Info>
+
+## Certificate Display
+
+Certificates include:
+
+- **User Name**: Your full name
+- **Course/Challenge Title**: What you completed
+- **Completion Date**: When you finished
+- **Technologies**: Tags showing tech stack (challenges)
+- **Duration**: Time invested (workshops)
+- **Certificate ID**: Unique verification number
+- **Codante Logo**: Official branding
+
+## Certifiable Types
+
+```typescript
+type Certifiable = WorkshopUser | ChallengeUser;
+```
+
+### Challenge User
+
+```typescript
+type ChallengeUser = {
+  id: number;
+  user: User;
+  challenge: ChallengeSummary;
+  completed: boolean;
+  completed_at: string;
+  certificate: Certificate | null;
+  // ... other fields
+}
+```
+
+### Workshop User
+
+```typescript
+type WorkshopUser = {
+  id: number;
+  workshop_id: number;
+  user_id: number;
+  status: "in-progress" | "completed";
+  completed_at: string;
+  certificate: Certificate;
+  // ... other fields
+}
+```
+
+## Certificate Verification
+
+Each certificate has a unique ID for verification:
+
+```typescript
+id: string;  // Unique certificate identifier
+```
+
+<Card title="Verify Certificate" icon="shield-check">
+  Anyone can verify a certificate's authenticity using its unique ID at `/certificates/{id}`
+</Card>
+
+## Sharing Certificates
+
+<CardGroup cols={3}>
+  <Card title="LinkedIn" icon="linkedin">
+    Add to your LinkedIn profile under Licenses & Certifications
+  </Card>
+  <Card title="Portfolio" icon="briefcase">
+    Embed or link certificates in your portfolio website
+  </Card>
+  <Card title="Resume" icon="file-pdf">
+    Include certificate links on your resume
+  </Card>
+</CardGroup>
+
+### Certificate URLs
+
+Share your certificate with this URL format:
+
+```
+https://codante.io/certificates/{certificate-id}
+```
+
+## Error Handling
+
+Certificate requests include comprehensive error handling:
+
+```typescript
+error?: any;  // Present if certificate generation fails
+```
+
+### Common Errors
+
+<Steps>
+  <Step title="Incomplete Requirements">
+    ```typescript
+    error: "Você precisa completar o conteúdo antes de solicitar o certificado."
+    ```
+    
+    Ensure all requirements are met before requesting.
+  </Step>
+  
+  <Step title="Already Requested">
+    ```typescript
+    error: "Você já solicitou este certificado."
+    ```
+    
+    Check your certificates dashboard for existing certificate.
+  </Step>
+  
+  <Step title="Server Error">
+    ```typescript
+    error: "Ocorreu um erro solicitar o Certificado. Por favor, tente novamente ou entre em contato."
+    ```
+    
+    Try again or contact support.
+  </Step>
+</Steps>
+
+## API Reference
+
+### Request Certificate
+
+```typescript
+await requestCertificate(
+  request: Request,
+  certifiable_type: string,
+  certifiable_id: string
+);
+// Returns: Certificate | { error: string }
+```
+
+### Get Certificate by Slug
+
+```typescript
+await getCertificateBySlug(
+  request: Request,
+  slug: string
+);
+// Returns: Certificate | { error: string }
+```
+
+### Get Certificate by ID
+
+```typescript
+await getCertificateById(
+  id: string
+): Promise<Certificate>;
+// Returns: Certificate | { error: string }
+```
+
+## Certificate Requirements
+
+### For Challenge Certificates
+
+<Steps>
+  <Step title="Complete All Steps">
+    - Connect GitHub
+    - Join challenge
+    - Fork repository
+    - Submit solution
+    - Mark as completed
+  </Step>
+  
+  <Step title="Submission Validation">
+    Ensure your submission includes:
+    - Valid deployment URL or screenshot
+    - Working project demonstrating requirements
+  </Step>
+  
+  <Step title="Request Certificate">
+    After marking as complete, request your certificate
+  </Step>
+</Steps>
+
+### For Workshop Certificates
+
+<Steps>
+  <Step title="Watch All Lessons">
+    Complete 100% of workshop lessons
+    
+    ```typescript
+    status: "completed"
+    ```
+  </Step>
+  
+  <Step title="Complete Exercises">
+    Finish any associated coding exercises or challenges
+  </Step>
+  
+  <Step title="Request Certificate">
+    Certificate option appears after workshop completion
+  </Step>
+</Steps>
+
+## Certificate Collection
+
+View all your earned certificates:
+
+```typescript
+// User's certificates accessible at /certificados
+certificates: Certificate[];
+```
+
+<Info>
+Your certificates dashboard displays all earned certificates with quick access to sharing options.
+</Info>
+
+## Professional Use
+
+### LinkedIn Integration
+
+<Steps>
+  <Step title="Add License/Certification">
+    Go to LinkedIn profile → Add profile section → Licenses & certifications
+  </Step>
+  
+  <Step title="Fill Details">
+    - Name: Workshop/Challenge title from certificate
+    - Issuing organization: Codante.io
+    - Issue date: Completion date from certificate
+    - Credential ID: Certificate ID
+    - Credential URL: Certificate link
+  </Step>
+  
+  <Step title="Save and Display">
+    Certificate appears on your LinkedIn profile
+  </Step>
+</Steps>
+
+### Portfolio Integration
+
+```html
+<!-- Embed certificate badge -->
+<a href="https://codante.io/certificates/{id}" target="_blank">
+  <img src="certificate-badge.png" alt="Codante Certificate" />
+</a>
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Complete Fully" icon="100">
+    Ensure all requirements are met before requesting certificate
+  </Card>
+  <Card title="Update Profile" icon="user-pen">
+    Add certificates to LinkedIn and portfolio immediately
+  </Card>
+  <Card title="Verify Links" icon="link">
+    Test certificate links before sharing with employers
+  </Card>
+  <Card title="Showcase Skills" icon="medal">
+    Use certificates to demonstrate specific technical competencies
+  </Card>
+</CardGroup>
+
+## Certificate Metadata Example
+
+### Challenge Certificate
+
+```json
+{
+  "id": "cert_abc123",
+  "certifiable_type": "ChallengeUser",
+  "status": "published",
+  "metadata": {
+    "certifiable_source_name": "React Dashboard with Tailwind CSS",
+    "certifiable_slug": "react-dashboard",
+    "tags": ["React", "TypeScript", "Tailwind CSS", "Vite"],
+    "start_date": "2024-01-15",
+    "end_date": "2024-01-20"
+  }
+}
+```
+
+### Workshop Certificate
+
+```json
+{
+  "id": "cert_xyz789",
+  "certifiable_type": "WorkshopUser",
+  "status": "published",
+  "metadata": {
+    "certifiable_source_name": "Advanced React Patterns",
+    "certifiable_slug": "advanced-react-patterns",
+    "duration_in_seconds": "7200",
+    "end_date": "2024-02-10"
+  }
+}
+```

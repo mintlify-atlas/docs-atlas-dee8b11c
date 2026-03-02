@@ -1,0 +1,556 @@
+---
+title: Track
+description: Track model types and functions for managing learning paths (trilhas)
+---
+
+## Overview
+
+The Track model handles learning paths ("trilhas") on Codante.io, which are structured collections of workshops, challenges, and other educational content organized into sections.
+
+## Type Definitions
+
+### Track
+
+Complete track object representing a learning path.
+
+<Expandable title="Track Properties">
+<ResponseField name="id" type="string" required>
+  Unique identifier for the track
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Track name
+</ResponseField>
+
+<ResponseField name="slug" type="string" required>
+  URL-friendly slug
+</ResponseField>
+
+<ResponseField name="short_description" type="string" required>
+  Brief description of the track
+</ResponseField>
+
+<ResponseField name="description" type="string" required>
+  Full track description
+</ResponseField>
+
+<ResponseField name="image_url" type="string">
+  Track cover image URL
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Track status: `"draft"`, `"published"`, `"soon"`, or `"archived"`
+</ResponseField>
+
+<ResponseField name="difficulty" type="1 | 2 | 3" required>
+  Difficulty level (1: easy, 2: medium, 3: hard)
+</ResponseField>
+
+<ResponseField name="duration_in_minutes" type="number" required>
+  Total estimated duration in minutes
+</ResponseField>
+
+<ResponseField name="trackables" type="Array<WorkshopTrackable | ChallengeTrackable>" required>
+  Array of workshops and challenges in the track
+</ResponseField>
+
+<ResponseField name="created_at" type="string" required>
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="updated_at" type="string" required>
+  Last update timestamp
+</ResponseField>
+</Expandable>
+
+### WorkshopTrackable
+
+Workshop item within a track.
+
+```typescript
+type WorkshopTrackable = {
+  id: number;
+  type: "workshop";
+  name: string;
+  slug: string;
+  video_url: string;
+  instructor: Instructor;
+  lessons: SidebarLesson[];
+  lesson_sections: {
+    name: string;
+    lesson_ids: number[];
+  }[];
+};
+```
+
+<ResponseField name="id" type="number" required>
+  Workshop identifier
+</ResponseField>
+
+<ResponseField name="type" type="string" required>
+  Always `"workshop"`
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Workshop name
+</ResponseField>
+
+<ResponseField name="slug" type="string" required>
+  Workshop slug
+</ResponseField>
+
+<ResponseField name="video_url" type="string" required>
+  Introduction video URL
+</ResponseField>
+
+<ResponseField name="instructor" type="Instructor" required>
+  Instructor information
+</ResponseField>
+
+<ResponseField name="lessons" type="SidebarLesson[]" required>
+  Array of lessons
+</ResponseField>
+
+<ResponseField name="lesson_sections" type="Array" required>
+  Lesson organization
+</ResponseField>
+
+### ChallengeTrackable
+
+Challenge item within a track.
+
+```typescript
+type ChallengeTrackable = {
+  id: number;
+  name: string;
+  slug: string;
+  image_url: string;
+  challengeUser: ChallengeUser;
+  type: "challenge";
+  track_lessons: SidebarLesson[];
+  solution: {
+    lessons: SidebarLesson[];
+    lesson_sections: {
+      name: string;
+      lesson_ids: number[];
+    }[];
+  };
+};
+```
+
+<ResponseField name="id" type="number" required>
+  Challenge identifier
+</ResponseField>
+
+<ResponseField name="type" type="string" required>
+  Always `"challenge"`
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Challenge name
+</ResponseField>
+
+<ResponseField name="slug" type="string" required>
+  Challenge slug
+</ResponseField>
+
+<ResponseField name="image_url" type="string" required>
+  Challenge image URL
+</ResponseField>
+
+<ResponseField name="challengeUser" type="ChallengeUser" required>
+  User's challenge data
+</ResponseField>
+
+<ResponseField name="track_lessons" type="SidebarLesson[]" required>
+  Track-specific lessons
+</ResponseField>
+
+<ResponseField name="solution" type="object" required>
+  Solution lessons and structure
+</ResponseField>
+
+### TrackSection
+
+Organizational section within a track.
+
+```typescript
+type TrackSection = {
+  id: number;
+  track_id: number;
+  name: string;
+  description: string;
+  position: number;
+  instructors: Instructor[];
+  tags: Tag[];
+  trackables: (Challenge | Workshop | TrackItem)[];
+};
+```
+
+<ResponseField name="id" type="number" required>
+  Section identifier
+</ResponseField>
+
+<ResponseField name="track_id" type="number" required>
+  Parent track ID
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Section name
+</ResponseField>
+
+<ResponseField name="description" type="string" required>
+  Section description
+</ResponseField>
+
+<ResponseField name="position" type="number" required>
+  Section order position
+</ResponseField>
+
+<ResponseField name="instructors" type="Instructor[]" required>
+  Instructors for this section
+</ResponseField>
+
+<ResponseField name="tags" type="Tag[]" required>
+  Technology tags
+</ResponseField>
+
+<ResponseField name="trackables" type="Array" required>
+  Section content items
+</ResponseField>
+
+### TrackItem
+
+Custom content item (external link or markdown) in a track.
+
+```typescript
+type TrackItem = {
+  id: number;
+  type: "external_link" | "markdown";
+  name: string;
+  content: string;
+  track_section_id: number;
+  position: number;
+  status: "draft" | "published" | "soon" | "archived";
+  pivot?: TrackablePivot;
+  completed?: boolean;
+  is_premium?: boolean;
+};
+```
+
+<ResponseField name="id" type="number" required>
+  Item identifier
+</ResponseField>
+
+<ResponseField name="type" type="string" required>
+  Item type: `"external_link"` or `"markdown"`
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Item name
+</ResponseField>
+
+<ResponseField name="content" type="string" required>
+  Item content (URL or markdown)
+</ResponseField>
+
+<ResponseField name="track_section_id" type="number" required>
+  Parent section ID
+</ResponseField>
+
+<ResponseField name="position" type="number" required>
+  Order position
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Publication status
+</ResponseField>
+
+### TrackablePivot
+
+Relationship data for items within a track.
+
+```typescript
+type TrackablePivot = {
+  id: string;
+  trackable_type: string;
+  trackable_id: number;
+  track_id: number;
+  position: number;
+  name: string;
+  description: string;
+  section_id: number;
+};
+```
+
+<ResponseField name="id" type="string" required>
+  Pivot identifier
+</ResponseField>
+
+<ResponseField name="trackable_type" type="string" required>
+  Type of trackable (workshop, challenge, etc.)
+</ResponseField>
+
+<ResponseField name="trackable_id" type="number" required>
+  Trackable item ID
+</ResponseField>
+
+<ResponseField name="track_id" type="number" required>
+  Parent track ID
+</ResponseField>
+
+<ResponseField name="position" type="number" required>
+  Position in track
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Custom name in track context
+</ResponseField>
+
+<ResponseField name="description" type="string" required>
+  Custom description in track context
+</ResponseField>
+
+<ResponseField name="section_id" type="number" required>
+  Parent section ID
+</ResponseField>
+
+## Functions
+
+### getTracks
+
+Fetches all available tracks.
+
+```typescript
+async function getTracks(): Promise<Array<Track>>;
+```
+
+**Returns**: Array of all tracks
+
+**Example**:
+```typescript
+import { getTracks } from "~/lib/models/track.server";
+
+export async function loader() {
+  const tracks = await getTracks();
+  return json({ tracks });
+}
+```
+
+### getTrack
+
+Fetches a single track by slug.
+
+<ParamField path="slug" type="string" required>
+  Track slug identifier
+</ParamField>
+
+<ParamField path="request" type="Request" required>
+  Request object for authentication
+</ParamField>
+
+```typescript
+async function getTrack(
+  slug: string,
+  request: Request,
+): Promise<Track>;
+```
+
+**Returns**: Track object or null if not found
+
+**Example**:
+```typescript
+import { getTrack } from "~/lib/models/track.server";
+
+export async function loader({ params, request }: LoaderFunctionArgs) {
+  const track = await getTrack(params.slug, request);
+  
+  if (!track) {
+    throw new Response("Track not found", { status: 404 });
+  }
+  
+  return json({ track });
+}
+```
+
+### toggleTrackableCompleted
+
+Toggles completion status for a trackable item.
+
+<ParamField path="trackableId" type="string" required>
+  Trackable item identifier
+</ParamField>
+
+<ParamField path="request" type="Request" required>
+  Request object for authentication
+</ParamField>
+
+```typescript
+async function toggleTrackableCompleted(
+  trackableId: string,
+  request: Request,
+): Promise<{
+  success?: string;
+  error?: string;
+  timestamp?: string;
+  trackableId?: string;
+  completed?: boolean;
+}>;
+```
+
+**Returns**: Success or error object with completion status
+
+**Example**:
+```typescript
+import { toggleTrackableCompleted } from "~/lib/models/track.server";
+
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData();
+  const trackableId = formData.get("trackableId") as string;
+  
+  const result = await toggleTrackableCompleted(trackableId, request);
+  
+  if (result.error) {
+    return json({ error: result.error }, { status: 400 });
+  }
+  
+  return json(result);
+}
+```
+
+### isWorkshopTrackable
+
+Type guard function to determine if a trackable is a workshop.
+
+<ParamField path="workshop" type="WorkshopTrackable | ChallengeTrackable" required>
+  Trackable item to check
+</ParamField>
+
+```typescript
+function isWorkshopTrackable(
+  workshop: WorkshopTrackable | ChallengeTrackable,
+): workshop is WorkshopTrackable;
+```
+
+**Returns**: `true` if the trackable is a workshop, `false` otherwise
+
+**Example**:
+```typescript
+import { isWorkshopTrackable } from "~/lib/models/track.server";
+
+function renderTrackable(trackable: WorkshopTrackable | ChallengeTrackable) {
+  if (isWorkshopTrackable(trackable)) {
+    return <WorkshopItem workshop={trackable} />;
+  } else {
+    return <ChallengeItem challenge={trackable} />;
+  }
+}
+```
+
+## Usage Examples
+
+### Track Listing Page
+
+```typescript
+import { getTracks } from "~/lib/models/track.server";
+
+export async function loader() {
+  const tracks = await getTracks();
+  return json({ tracks });
+}
+
+export default function TracksPage() {
+  const { tracks } = useLoaderData<typeof loader>();
+  
+  return (
+    <div>
+      <h1>Learning Paths</h1>
+      {tracks.map((track) => (
+        <div key={track.id}>
+          <h2>{track.name}</h2>
+          <p>{track.short_description}</p>
+          <p>Difficulty: {track.difficulty}</p>
+          <p>Duration: {track.duration_in_minutes} minutes</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+### Track Detail with Progress
+
+```typescript
+import { getTrack } from "~/lib/models/track.server";
+import { requireAuth } from "~/lib/services/auth.server";
+
+export async function loader({ params, request }: LoaderFunctionArgs) {
+  await requireAuth(request);
+  const track = await getTrack(params.slug, request);
+  
+  if (!track) {
+    throw new Response("Not Found", { status: 404 });
+  }
+  
+  return json({ track });
+}
+
+export default function TrackDetailPage() {
+  const { track } = useLoaderData<typeof loader>();
+  
+  return (
+    <div>
+      <h1>{track.name}</h1>
+      <p>{track.description}</p>
+      <div>
+        {track.trackables.map((trackable) => (
+          <div key={trackable.id}>
+            <h3>{trackable.name}</h3>
+            {trackable.type === "workshop" && (
+              <p>Instructor: {trackable.instructor.name}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### Marking Item as Complete
+
+```typescript
+import { toggleTrackableCompleted } from "~/lib/models/track.server";
+import { requireAuth } from "~/lib/services/auth.server";
+
+export async function action({ request }: ActionFunctionArgs) {
+  await requireAuth(request);
+  
+  const formData = await request.formData();
+  const trackableId = formData.get("trackableId") as string;
+  
+  const result = await toggleTrackableCompleted(trackableId, request);
+  
+  return json(result);
+}
+
+export default function TrackableItem({ trackable }) {
+  const fetcher = useFetcher();
+  
+  const handleToggle = () => {
+    fetcher.submit(
+      { trackableId: trackable.pivot.id },
+      { method: "post" }
+    );
+  };
+  
+  return (
+    <div>
+      <h3>{trackable.name}</h3>
+      <button onClick={handleToggle}>
+        {trackable.completed ? "Mark Incomplete" : "Mark Complete"}
+      </button>
+    </div>
+  );
+}
+```

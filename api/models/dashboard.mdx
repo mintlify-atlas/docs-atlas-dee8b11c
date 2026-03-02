@@ -1,0 +1,224 @@
+---
+title: 'Dashboard'
+description: 'Dashboard data types and API reference'
+---
+
+The Dashboard model provides aggregated user data for the main dashboard view, including challenge progress, workshop enrollment, and certificate status.
+
+## ChallengeUserDashboard Type
+
+<ParamField path="id" type="number" required>
+  Challenge enrollment ID
+</ParamField>
+
+<ParamField path="challenge_id" type="number" required>
+  ID of the associated challenge
+</ParamField>
+
+<ParamField path="completed" type="boolean" required>
+  Whether the user completed the challenge
+</ParamField>
+
+<ParamField path="challenge_name" type="string" required>
+  Name of the challenge
+</ParamField>
+
+<ParamField path="challenge_image" type="string" required>
+  URL to the challenge's cover image
+</ParamField>
+
+<ParamField path="challenge_slug" type="string" required>
+  URL slug for the challenge
+</ParamField>
+
+<ParamField path="listed" type="boolean" required>
+  Whether the submission is publicly listed
+</ParamField>
+
+<ParamField path="submission_url" type="string" required>
+  URL to the user's submission (GitHub repo, live demo, etc.)
+</ParamField>
+
+<ParamField path="submission_image_url" type="string" required>
+  Screenshot or image of the submission
+</ParamField>
+
+## WorkshopUserDashboard Type
+
+<ParamField path="id" type="number" required>
+  Workshop enrollment ID
+</ParamField>
+
+<ParamField path="status" type="string" required>
+  Enrollment status ("in-progress" or "completed")
+</ParamField>
+
+<ParamField path="workshop_id" type="number" required>
+  ID of the associated workshop
+</ParamField>
+
+<ParamField path="workshop_name" type="string" required>
+  Name of the workshop
+</ParamField>
+
+<ParamField path="workshop_image" type="string" required>
+  URL to the workshop's cover image
+</ParamField>
+
+<ParamField path="workshop_slug" type="string" required>
+  URL slug for the workshop
+</ParamField>
+
+## CertificateDashboard Type
+
+<ParamField path="id" type="number" required>
+  Certificate ID
+</ParamField>
+
+<ParamField path="certifiable_type" type="string" required>
+  Type of content ("Workshop" or "Challenge")
+</ParamField>
+
+<ParamField path="status" type="string" required>
+  Certificate status ("pending", "approved", "denied")
+</ParamField>
+
+<ParamField path="certifiable_name" type="string" required>
+  Name of the workshop or challenge
+</ParamField>
+
+## Dashboard Type
+
+<ParamField path="challenge_users" type="ChallengeUserDashboard[]" required>
+  Array of user's challenge enrollments and submissions
+</ParamField>
+
+<ParamField path="workshop_users" type="WorkshopUserDashboard[]" required>
+  Array of user's workshop enrollments
+</ParamField>
+
+<ParamField path="certificates" type="CertificateDashboard[]" required>
+  Array of user's certificate requests
+</ParamField>
+
+## Functions
+
+### getDashboardData
+
+Fetch all dashboard data for the authenticated user.
+
+```typescript
+async function getDashboardData(
+  request: Request
+): Promise<AxiosResponse<any, any> | { error?: string }>
+```
+
+<ParamField path="request" type="Request" required>
+  Request object with authentication cookie
+</ParamField>
+
+**Returns:** Dashboard data or error object
+
+### getDashboardWorkshops
+
+Fetch workshop cards for the dashboard view.
+
+```typescript
+async function getDashboardWorkshops(
+  request: Request
+): Promise<WorkshopCard[]>
+```
+
+<ParamField path="request" type="Request" required>
+  Request object with authentication cookie
+</ParamField>
+
+**Returns:** Array of workshop cards
+
+## Usage Examples
+
+### Load Dashboard Data
+
+```typescript
+import { getDashboardData } from "~/lib/models/dashboard.server";
+import { requireAuth } from "~/lib/services/auth.server";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  await requireAuth(request);
+
+  const dashboardData = await getDashboardData(request);
+
+  if ("error" in dashboardData) {
+    return json({ error: dashboardData.error }, { status: 500 });
+  }
+
+  return json(dashboardData);
+}
+```
+
+### Display Challenge Progress
+
+```tsx
+import type { ChallengeUserDashboard } from "~/lib/models/dashboard.server";
+
+function ChallengeList({ challenges }: { challenges: ChallengeUserDashboard[] }) {
+  return (
+    <div className="grid gap-4">
+      {challenges.map((challenge) => (
+        <a
+          key={challenge.id}
+          href={`/mini-projetos/${challenge.challenge_slug}`}
+          className="block"
+        >
+          <img src={challenge.challenge_image} alt={challenge.challenge_name} />
+          <h3>{challenge.challenge_name}</h3>
+          {challenge.completed ? (
+            <span className="text-green-600">✓ Completed</span>
+          ) : (
+            <span className="text-yellow-600">In Progress</span>
+          )}
+        </a>
+      ))}
+    </div>
+  );
+}
+```
+
+### Display Workshop Enrollments
+
+```tsx
+import type { WorkshopUserDashboard } from "~/lib/models/dashboard.server";
+
+function WorkshopList({ workshops }: { workshops: WorkshopUserDashboard[] }) {
+  const inProgress = workshops.filter((w) => w.status === "in-progress");
+  const completed = workshops.filter((w) => w.status === "completed");
+
+  return (
+    <div>
+      <section>
+        <h2>In Progress</h2>
+        {inProgress.map((workshop) => (
+          <WorkshopCard key={workshop.id} workshop={workshop} />
+        ))}
+      </section>
+
+      <section>
+        <h2>Completed</h2>
+        {completed.map((workshop) => (
+          <WorkshopCard key={workshop.id} workshop={workshop} />
+        ))}
+      </section>
+    </div>
+  );
+}
+```
+
+## Related Types
+
+- [Challenge](/api/models/challenge) - Full challenge data structure
+- [Workshop](/api/models/workshop) - Full workshop data structure
+- [User](/api/models/user) - User model
+
+## File Location
+
+`app/lib/models/dashboard.server.ts`

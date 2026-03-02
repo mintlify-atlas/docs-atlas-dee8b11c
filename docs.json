@@ -34,7 +34,8 @@
               "features/workshops",
               "features/tracks",
               "features/community",
-              "features/certification"
+              "features/certification",
+              "features/subscription"
             ]
           },
           {
@@ -69,7 +70,12 @@
               "api/models/track",
               "api/models/user",
               "api/models/lesson",
-              "api/models/subscription"
+              "api/models/subscription",
+              "api/models/plan",
+              "api/models/dashboard",
+              "api/models/comments",
+              "api/models/reactions",
+              "api/models/instructor"
             ]
           },
           {

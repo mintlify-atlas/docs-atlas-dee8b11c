@@ -1,0 +1,310 @@
+---
+title: 'Subscription & Pro Features'
+description: 'Learn about Codante.io Pro subscription benefits, pricing plans, and premium content access'
+---
+
+Codante.io offers a Pro subscription that unlocks premium content, advanced features, and additional learning resources.
+
+<CardGroup cols={2}>
+  <Card title="Premium Content" icon="star">
+    Access exclusive workshops, challenges, and learning tracks
+  </Card>
+  <Card title="Certificate Priority" icon="certificate">
+    Faster certificate processing and verification
+  </Card>
+  <Card title="Pro Badge" icon="badge-check">
+    Display your Pro status across the platform
+  </Card>
+  <Card title="Early Access" icon="rocket">
+    Get early access to new features and content
+  </Card>
+</CardGroup>
+
+## Subscription Plans
+
+Codante.io offers flexible subscription options through the Plan system.
+
+### Plan Structure
+
+Plans are defined with the following properties (from `app/lib/models/plan.server.ts`):
+
+```typescript
+type Plan = {
+  id: number;
+  name: string;                 // e.g., "Pro Monthly", "Pro Yearly"
+  price_in_cents: number;       // Price in centavos (R$)
+  slug: string;                 // URL-friendly identifier
+  details: string;              // HTML description of features
+};
+```
+
+### Coupon Support
+
+Promotional coupons can be applied during subscription:
+
+```typescript
+type Coupon = {
+  code: string;                 // Coupon code
+  name: string;                 // Display name
+  discount_amount: number;      // Discount value
+  type: string;                 // "percentage" or "fixed"
+  error?: boolean;              // Validation error flag
+  message?: string;             // Status message
+};
+```
+
+## Premium Content Access
+
+Content across the platform can be marked as premium, requiring an active Pro subscription.
+
+### Content Types
+
+<Tabs>
+  <Tab title="Challenges">
+    Premium challenges (`is_premium: true`) provide advanced projects with:
+    - More complex requirements
+    - Production-ready features
+    - Advanced technology stacks
+    - Detailed solution explanations
+  </Tab>
+  
+  <Tab title="Workshops">
+    Premium workshops offer:
+    - Expert-led video content
+    - Advanced topics and techniques
+    - Industry best practices
+    - Exclusive Q&A sessions
+  </Tab>
+  
+  <Tab title="Tracks">
+    Premium learning tracks include:
+    - Structured learning paths
+    - Comprehensive curriculum
+    - Multiple workshops and challenges
+    - Career-focused content
+  </Tab>
+</Tabs>
+
+### Access Control
+
+The platform uses the `is_premium` flag to control content access:
+
+```typescript
+// From challenge model
+type Challenge = {
+  // ... other fields
+  is_premium: boolean;
+  // ... other fields
+};
+
+// From workshop model
+type Workshop = {
+  // ... other fields
+  is_premium: boolean;
+  // ... other fields
+};
+```
+
+### Visual Indicators
+
+Premium content is marked with:
+- **Lock icon** 🔒 on content cards
+- **"Conteúdo PRO" badge** on thumbnails
+- **Pro status requirement** in descriptions
+- **Upgrade prompts** for non-subscribers
+
+## Subscription Management
+
+### Active Subscription
+
+User subscription status is tracked through the Subscription model (from `app/lib/models/subscription.server.ts`):
+
+```typescript
+type Subscription = {
+  id: string;
+  user_id: number;
+  status: "active" | "canceled" | "past_due" | "trialing" | "incomplete";
+  plan_name: string | null;
+  current_period_start: string;
+  current_period_end: string;
+  cancel_at_period_end: boolean;
+  pagarme_order_id: string;
+  pagarme_payment_method: string;
+  // ... other fields
+};
+```
+
+### Subscription Status
+
+<Note>
+Users with `status: "active"` can access all premium content. Other statuses may have restricted access.
+</Note>
+
+### Payment Methods
+
+Codante.io supports multiple payment methods through Pagar.me integration:
+- **Credit card** - Instant activation
+- **Boleto bancário** - Activation after payment confirmation
+- **PIX** - Fast payment with quick activation
+
+## User Experience
+
+### For Free Users
+
+Free users can:
+- Access all free challenges, workshops, and tracks
+- View descriptions and previews of premium content
+- Participate in community discussions
+- Earn certificates for free content
+- See upgrade prompts for premium features
+
+### For Pro Members
+
+Pro subscribers enjoy:
+- **Full content library** - Access to all workshops, challenges, and tracks
+- **Pro badge** - Displayed on profile and comments
+- **Priority support** - Faster response times
+- **Certificate priority** - Expedited certificate processing
+- **Early access** - New features and content before general release
+- **No ads** - Ad-free experience across the platform
+
+## Subscription Workflow
+
+<Steps>
+  <Step title="Browse Plans">
+    Users can view available subscription plans at `/subscription` route. Plans are fetched with:
+    
+    ```typescript
+    import { getPlanDetails } from "~/lib/models/plan.server";
+    
+    const { plan, coupon } = await getPlanDetails({
+      planId: 1,
+      couponCode: searchParams.get("coupon"),
+    });
+    ```
+  </Step>
+
+  <Step title="Apply Coupon (Optional)">
+    Users can enter promotional codes during checkout. Coupons are validated server-side and discounts are calculated automatically.
+  </Step>
+
+  <Step title="Complete Payment">
+    Users select a payment method and complete the transaction through Pagar.me's secure payment flow.
+  </Step>
+
+  <Step title="Activation">
+    Upon successful payment, the subscription is activated and the user gains immediate access to premium content.
+  </Step>
+
+  <Step title="Manage Subscription">
+    Users can view subscription details, payment history, and manage renewal settings in their account dashboard at `/minha-conta`.
+  </Step>
+</Steps>
+
+## Technical Implementation
+
+### Checking Pro Status
+
+To check if a user has Pro access in your components:
+
+```tsx
+import type { User } from "~/lib/models/user.server";
+import { useOutletContext } from "react-router";
+
+export default function SomeComponent() {
+  const { user } = useOutletContext<{ user: User }>();
+  const isPro = user?.subscription?.status === "active";
+
+  return (
+    <div>
+      {isPro ? (
+        <div>Premium content here</div>
+      ) : (
+        <div>
+          <p>This is premium content.</p>
+          <a href="/subscription">Upgrade to Pro</a>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### Protected Premium Routes
+
+Server-side protection for premium content:
+
+```typescript
+import { requireAuth } from "~/lib/services/auth.server";
+import { user } from "~/lib/services/auth.server";
+import { redirect } from "react-router";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  await requireAuth(request);
+  const currentUser = await user(request);
+
+  // Check if content is premium
+  const isPremiumContent = true; // from your content check
+  const hasActiveSubscription = 
+    currentUser.subscription?.status === "active";
+
+  if (isPremiumContent && !hasActiveSubscription) {
+    return redirect("/subscription?required=true");
+  }
+
+  // User has access, continue loading content
+  return json({ content });
+}
+```
+
+### Display Pro Badge
+
+Show Pro badge on user profiles and comments:
+
+```tsx
+function UserBadge({ user }: { user: User }) {
+  const isPro = user.subscription?.status === "active";
+
+  return (
+    <div className="flex items-center gap-2">
+      <span>{user.name}</span>
+      {isPro && (
+        <span className="px-2 py-1 text-xs font-semibold bg-indigo-600 text-white rounded">
+          PRO
+        </span>
+      )}
+    </div>
+  );
+}
+```
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Subscription Model" icon="code" href="/api/models/subscription">
+    Technical reference for subscription types
+  </Card>
+  <Card title="Plan Model" icon="code" href="/api/models/plan">
+    Plan and pricing data structures
+  </Card>
+  <Card title="User Model" icon="user" href="/api/models/user">
+    User model with subscription status
+  </Card>
+  <Card title="Authentication" icon="lock" href="/development/authentication">
+    Authentication and access control
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<Tip>
+Always check subscription status server-side for security. Client-side checks are for UX only and can be bypassed.
+</Tip>
+
+<Warning>
+Cache subscription status carefully. Use short TTLs to ensure users get immediate access after subscribing.
+</Warning>
+
+<Info>
+Display upgrade prompts contextually when users encounter premium content. Avoid aggressive or intrusive upgrade messaging.
+</Info>

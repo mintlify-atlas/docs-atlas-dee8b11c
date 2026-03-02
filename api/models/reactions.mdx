@@ -1,0 +1,234 @@
+---
+title: 'Reactions'
+description: 'Reactions API reference for emoji responses'
+---
+
+The Reactions API allows users to add emoji reactions to challenges, workshops, comments, and submissions throughout Codante.io.
+
+## AllowedReaction Type
+
+Reactions are limited to four emoji types:
+
+```typescript
+type AllowedReaction = "like" | "exploding-head" | "rocket" | "fire";
+```
+
+- **like** 👍 - General approval or agreement
+- **exploding-head** 🤯 - Mind-blowing or impressive
+- **rocket** 🚀 - Exciting or high-quality work
+- **fire** 🔥 - Hot, trending, or excellent
+
+## ReactionCount Type
+
+<ParamField path="reaction" type="AllowedReaction" required>
+  The reaction type
+</ParamField>
+
+<ParamField path="count" type="number" required>
+  Number of users who added this reaction
+</ParamField>
+
+## Reactions Type
+
+<ParamField path="reaction_counts" type="ReactionCount[]" required>
+  Array of reaction counts for all reactions on this item
+</ParamField>
+
+<ParamField path="user_reactions" type="AllowedReaction[]" required>
+  Array of reactions the current user has added (empty if not authenticated)
+</ParamField>
+
+## Functions
+
+### react
+
+Add or remove a reaction. If the user already reacted with this emoji, it removes the reaction (toggle behavior).
+
+```typescript
+async function react(
+  request: Request,
+  reactableId: string,
+  reactableType: string,
+  reaction: AllowedReaction
+): Promise<AxiosResponse<any, any> | { error?: string }>
+```
+
+<ParamField path="request" type="Request" required>
+  Request object with authentication
+</ParamField>
+
+<ParamField path="reactableId" type="string" required>
+  ID of the item being reacted to
+</ParamField>
+
+<ParamField path="reactableType" type="string" required>
+  Type of item ("Challenge", "Workshop", "Comment", "Submission", etc.)
+</ParamField>
+
+<ParamField path="reaction" type="AllowedReaction" required>
+  The emoji reaction to add/remove
+</ParamField>
+
+**Returns:** Updated reaction data or error object
+
+## Usage Examples
+
+### Add a Reaction
+
+```typescript
+import { react } from "~/lib/models/reactions.server";
+import type { AllowedReaction } from "~/lib/models/reactions.server";
+
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData();
+  const challengeId = formData.get("challengeId") as string;
+  const reactionType = formData.get("reaction") as AllowedReaction;
+
+  const result = await react(
+    request,
+    challengeId,
+    "Challenge",
+    reactionType
+  );
+
+  if ("error" in result) {
+    return json({ error: result.error }, { status: 400 });
+  }
+
+  return json({ success: true });
+}
+```
+
+### Display Reaction Counts
+
+```tsx
+import type { Reactions, ReactionCount } from "~/lib/models/reactions.server";
+
+const emojiMap = {
+  like: "👍",
+  "exploding-head": "🤯",
+  rocket: "🚀",
+  fire: "🔥",
+};
+
+function ReactionButtons({ reactions }: { reactions: Reactions }) {
+  return (
+    <div className="flex gap-2">
+      {reactions.reaction_counts.map((reactionCount) => (
+        <button
+          key={reactionCount.reaction}
+          className={reactions.user_reactions.includes(reactionCount.reaction) ? "active" : ""}
+          onClick={() => handleReact(reactionCount.reaction)}
+        >
+          {emojiMap[reactionCount.reaction]} {reactionCount.count}
+        </button>
+      ))}
+    </div>
+  );
+}
+```
+
+### Optimistic UI Update
+
+```tsx
+import { useFetcher } from "react-router";
+import type { AllowedReaction, Reactions } from "~/lib/models/reactions.server";
+
+function ReactionButton({
+  reactions,
+  reactableId,
+  reactableType,
+}: {
+  reactions: Reactions;
+  reactableId: string;
+  reactableType: string;
+}) {
+  const fetcher = useFetcher();
+  const [optimisticReactions, setOptimisticReactions] = useState(reactions);
+
+  const handleReact = (reaction: AllowedReaction) => {
+    // Optimistic update
+    const hasReacted = optimisticReactions.user_reactions.includes(reaction);
+    const updatedReactions = { ...optimisticReactions };
+
+    if (hasReacted) {
+      // Remove reaction
+      updatedReactions.user_reactions = updatedReactions.user_reactions.filter(
+        (r) => r !== reaction
+      );
+      updatedReactions.reaction_counts = updatedReactions.reaction_counts.map(
+        (rc) =>
+          rc.reaction === reaction
+            ? { ...rc, count: rc.count - 1 }
+            : rc
+      );
+    } else {
+      // Add reaction
+      updatedReactions.user_reactions.push(reaction);
+      updatedReactions.reaction_counts = updatedReactions.reaction_counts.map(
+        (rc) =>
+          rc.reaction === reaction
+            ? { ...rc, count: rc.count + 1 }
+            : rc
+      );
+    }
+
+    setOptimisticReactions(updatedReactions);
+
+    // Submit to server
+    const formData = new FormData();
+    formData.append("reactableId", reactableId);
+    formData.append("reactableType", reactableType);
+    formData.append("reaction", reaction);
+    fetcher.submit(formData, { method: "post" });
+  };
+
+  return (
+    <div className="flex gap-2">
+      {optimisticReactions.reaction_counts.map((rc) => (
+        <button
+          key={rc.reaction}
+          onClick={() => handleReact(rc.reaction)}
+          className={optimisticReactions.user_reactions.includes(rc.reaction) ? "active" : ""}
+        >
+          {emojiMap[rc.reaction]} {rc.count}
+        </button>
+      ))}
+    </div>
+  );
+}
+```
+
+### React to Different Content Types
+
+```typescript
+import { react } from "~/lib/models/reactions.server";
+
+// React to a challenge
+await react(request, challengeId, "Challenge", "fire");
+
+// React to a workshop
+await react(request, workshopId, "Workshop", "rocket");
+
+// React to a comment
+await react(request, commentId, "Comment", "like");
+
+// React to a submission
+await react(request, submissionId, "Submission", "exploding-head");
+```
+
+## Permission Rules
+
+- Users must be authenticated to add reactions
+- Each user can add multiple different reactions to the same item
+- Clicking the same reaction again removes it (toggle behavior)
+- Reactions are polymorphic and work on any reactable content type
+
+## Related Features
+
+- [Community Features](/features/community) - User guide for community features
+- [Comments](/api/models/comments) - Comment system
+
+## File Location
+
+`app/lib/models/reactions.server.ts`

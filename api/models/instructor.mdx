@@ -1,0 +1,197 @@
+---
+title: 'Instructor'
+description: 'Instructor type definition for workshop authors'
+---
+
+The Instructor type represents workshop instructors and course authors on Codante.io.
+
+## Instructor Type
+
+<ParamField path="id" type="string" required>
+  Unique identifier for the instructor
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Full name of the instructor
+</ParamField>
+
+<ParamField path="company" type="string" required>
+  Company or organization the instructor is affiliated with
+</ParamField>
+
+<ParamField path="email" type="string" required>
+  Contact email address
+</ParamField>
+
+<ParamField path="avatar_url" type="string">
+  URL to the instructor's profile picture
+</ParamField>
+
+<ParamField path="bio" type="string" required>
+  Instructor biography (supports Markdown)
+</ParamField>
+
+<ParamField path="slug" type="string" required>
+  URL-friendly identifier for the instructor's profile page
+</ParamField>
+
+<ParamField path="created_at" type="string" required>
+  ISO 8601 timestamp of when the instructor was added
+</ParamField>
+
+<ParamField path="updated_at" type="string" required>
+  ISO 8601 timestamp of the last update
+</ParamField>
+
+<ParamField path="links" type="array">
+  Social media and website links for the instructor
+  
+  <Expandable title="Link object">
+    <ParamField path="url" type="string" required>
+      Full URL to the social profile or website
+    </ParamField>
+    
+    <ParamField path="type" type="string" required>
+      Platform identifier ("github", "linkedin", "twitter", "website", etc.)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Usage Examples
+
+### Display Instructor Information
+
+```tsx
+import type { Instructor } from "~/lib/models/instructor.server";
+
+function InstructorCard({ instructor }: { instructor: Instructor }) {
+  return (
+    <div className="instructor-card">
+      {instructor.avatar_url && (
+        <img
+          src={instructor.avatar_url}
+          alt={instructor.name}
+          className="w-16 h-16 rounded-full"
+        />
+      )}
+      <h3>{instructor.name}</h3>
+      <p className="text-sm text-gray-600">{instructor.company}</p>
+      <div className="prose" dangerouslySetInnerHTML={{ __html: instructor.bio }} />
+    </div>
+  );
+}
+```
+
+### Display Social Links
+
+```tsx
+import type { Instructor } from "~/lib/models/instructor.server";
+import { SiGithub, SiLinkedin, SiTwitter } from "react-icons/si";
+
+const iconMap = {
+  github: SiGithub,
+  linkedin: SiLinkedin,
+  twitter: SiTwitter,
+};
+
+function InstructorSocialLinks({ instructor }: { instructor: Instructor }) {
+  if (!instructor.links || instructor.links.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex gap-3">
+      {instructor.links.map((link, index) => {
+        const Icon = iconMap[link.type as keyof typeof iconMap];
+        
+        return (
+          <a
+            key={index}
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-600 hover:text-gray-900"
+          >
+            {Icon ? <Icon size={20} /> : link.type}
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+```
+
+### Access from Workshop
+
+```tsx
+import type { Workshop } from "~/lib/models/workshop.server";
+import { useLoaderData } from "react-router";
+
+export default function WorkshopPage() {
+  const { workshop } = useLoaderData<{ workshop: Workshop }>();
+  const instructor = workshop.instructor;
+
+  return (
+    <div>
+      <h1>{workshop.name}</h1>
+      
+      <div className="instructor-info">
+        <h2>Instructor</h2>
+        <div className="flex items-center gap-3">
+          {instructor.avatar_url && (
+            <img
+              src={instructor.avatar_url}
+              alt={instructor.name}
+              className="w-12 h-12 rounded-full"
+            />
+          )}
+          <div>
+            <p className="font-semibold">{instructor.name}</p>
+            <p className="text-sm text-gray-600">{instructor.company}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+### Link to Instructor Profile
+
+```tsx
+import type { Instructor } from "~/lib/models/instructor.server";
+import { Link } from "react-router";
+
+function InstructorLink({ instructor }: { instructor: Instructor }) {
+  return (
+    <Link
+      to={`/instrutores/${instructor.slug}`}
+      className="flex items-center gap-2 hover:underline"
+    >
+      {instructor.avatar_url && (
+        <img
+          src={instructor.avatar_url}
+          alt={instructor.name}
+          className="w-8 h-8 rounded-full"
+        />
+      )}
+      <span>{instructor.name}</span>
+    </Link>
+  );
+}
+```
+
+## Relationships
+
+- Each [Workshop](/api/models/workshop) has one instructor
+- Instructors can have multiple workshops
+- The `instructor` field is included in workshop API responses
+
+## Related Types
+
+- [Workshop](/api/models/workshop) - Workshop model that includes instructor
+- [User](/api/models/user) - User model (separate from instructors)
+
+## File Location
+
+`app/lib/models/instructor.server.ts`

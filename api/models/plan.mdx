@@ -1,0 +1,148 @@
+---
+title: 'Plan'
+description: 'Subscription plan types and pricing API reference'
+---
+
+The Plan model represents subscription plans and pricing information for Codante.io Pro memberships.
+
+## Plan Type
+
+<ParamField path="id" type="number" required>
+  Unique identifier for the plan
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Human-readable name of the plan (e.g., "Pro Monthly", "Pro Yearly")
+</ParamField>
+
+<ParamField path="price_in_cents" type="number" required>
+  Price in cents (centavos). Divide by 100 to get the price in reais (R$)
+</ParamField>
+
+<ParamField path="slug" type="string" required>
+  URL-friendly identifier for the plan
+</ParamField>
+
+<ParamField path="details" type="string" required>
+  Detailed description of the plan features and benefits
+</ParamField>
+
+## Coupon Type
+
+<ParamField path="code" type="string" required>
+  Coupon code that users can apply
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Display name for the coupon
+</ParamField>
+
+<ParamField path="discount_amount" type="number" required>
+  Discount amount (format depends on type)
+</ParamField>
+
+<ParamField path="type" type="string" required>
+  Type of discount (e.g., "percentage", "fixed")
+</ParamField>
+
+<ParamField path="error" type="boolean">
+  Whether an error occurred validating the coupon
+</ParamField>
+
+<ParamField path="message" type="string">
+  Error or success message for the coupon validation
+</ParamField>
+
+## Functions
+
+### getPlanDetails
+
+Retrieve plan details with optional coupon validation.
+
+```typescript
+async function getPlanDetails({
+  planId = 1,
+  couponCode,
+}: {
+  planId?: number;
+  couponCode: string | null;
+}): Promise<{ plan: Plan | null; coupon: Coupon | null }>
+```
+
+<ParamField path="planId" type="number" default={1}>
+  ID of the plan to retrieve
+</ParamField>
+
+<ParamField path="couponCode" type="string | null" required>
+  Optional coupon code to validate
+</ParamField>
+
+**Returns:** Object containing plan details and coupon information (if provided)
+
+## Usage Examples
+
+### Get Plan Details
+
+```typescript
+import { getPlanDetails } from "~/lib/models/plan.server";
+
+export async function loader() {
+  const { plan, coupon } = await getPlanDetails({
+    planId: 1,
+    couponCode: null,
+  });
+
+  return { plan, coupon };
+}
+```
+
+### Apply Coupon Code
+
+```typescript
+import { getPlanDetails } from "~/lib/models/plan.server";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const url = new URL(request.url);
+  const couponCode = url.searchParams.get("coupon");
+
+  const { plan, coupon } = await getPlanDetails({
+    planId: 1,
+    couponCode,
+  });
+
+  if (coupon?.error) {
+    return json({ error: coupon.message });
+  }
+
+  return json({ plan, coupon, discountedPrice: calculateDiscount(plan, coupon) });
+}
+```
+
+### Display Pricing
+
+```tsx
+import type { Plan } from "~/lib/models/plan.server";
+
+function PricingCard({ plan }: { plan: Plan }) {
+  const priceInReais = plan.price_in_cents / 100;
+
+  return (
+    <div>
+      <h3>{plan.name}</h3>
+      <p className="text-2xl font-bold">
+        R$ {priceInReais.toFixed(2)}
+      </p>
+      <div dangerouslySetInnerHTML={{ __html: plan.details }} />
+    </div>
+  );
+}
+```
+
+## Related Types
+
+- [Subscription](/api/models/subscription) - Active user subscriptions
+- [User](/api/models/user) - User model with subscription status
+
+## File Location
+
+`app/lib/models/plan.server.ts`

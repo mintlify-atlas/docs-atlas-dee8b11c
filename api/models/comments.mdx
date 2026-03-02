@@ -1,0 +1,231 @@
+---
+title: 'Comments'
+description: 'Comments API reference for community discussions'
+---
+
+The Comments API enables threaded discussions on challenges, workshops, and other content types throughout Codante.io.
+
+## Comment Type
+
+<ParamField path="id" type="string" required>
+  Unique identifier for the comment
+</ParamField>
+
+<ParamField path="user" type="User" required>
+  User who authored the comment (includes name, avatar, badges)
+</ParamField>
+
+<ParamField path="comment" type="string" required>
+  Comment text content (supports Markdown)
+</ParamField>
+
+<ParamField path="replying_to" type="string">
+  ID of the parent comment if this is a reply
+</ParamField>
+
+<ParamField path="commentable_id" type="string" required>
+  ID of the item being commented on (challenge, workshop, etc.)
+</ParamField>
+
+<ParamField path="commentable_type" type="string" required>
+  Type of item ("Challenge", "Workshop", "Lesson", etc.)
+</ParamField>
+
+<ParamField path="created_at_human" type="string" required>
+  Human-readable creation time (e.g., "2 hours ago")
+</ParamField>
+
+## Functions
+
+### createComment
+
+Create a new comment or reply.
+
+```typescript
+async function createComment(
+  request: Request,
+  commentableId: string,
+  commentableType: string,
+  comment: string,
+  replyingTo: string | null = null
+): Promise<AxiosResponse<any, any> | { error?: string }>
+```
+
+<ParamField path="request" type="Request" required>
+  Request object with authentication
+</ParamField>
+
+<ParamField path="commentableId" type="string" required>
+  ID of the item being commented on
+</ParamField>
+
+<ParamField path="commentableType" type="string" required>
+  Type of item (e.g., "Challenge", "Workshop")
+</ParamField>
+
+<ParamField path="comment" type="string" required>
+  Comment text (Markdown supported)
+</ParamField>
+
+<ParamField path="replyingTo" type="string | null" default={null}>
+  ID of parent comment if replying to another comment
+</ParamField>
+
+**Returns:** Response data or error object
+
+### updateComment
+
+Update an existing comment.
+
+```typescript
+async function updateComment(
+  request: Request,
+  commentId: string,
+  comment: string
+): Promise<AxiosResponse<any, any> | { error?: string }>
+```
+
+<ParamField path="request" type="Request" required>
+  Request object with authentication
+</ParamField>
+
+<ParamField path="commentId" type="string" required>
+  ID of the comment to update
+</ParamField>
+
+<ParamField path="comment" type="string" required>
+  Updated comment text
+</ParamField>
+
+**Returns:** Response data or error object
+
+### deleteComment
+
+Delete a comment.
+
+```typescript
+async function deleteComment(
+  request: Request,
+  commentId: string
+): Promise<AxiosResponse<any, any> | { error?: string }>
+```
+
+<ParamField path="request" type="Request" required>
+  Request object with authentication
+</ParamField>
+
+<ParamField path="commentId" type="string" required>
+  ID of the comment to delete
+</ParamField>
+
+**Returns:** Response data or error object
+
+## Usage Examples
+
+### Create a Comment
+
+```typescript
+import { createComment } from "~/lib/models/comments.server";
+
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData();
+  const commentText = formData.get("comment") as string;
+  const challengeId = formData.get("challengeId") as string;
+
+  const result = await createComment(
+    request,
+    challengeId,
+    "Challenge",
+    commentText
+  );
+
+  if ("error" in result) {
+    return json({ error: result.error }, { status: 400 });
+  }
+
+  return json({ success: true });
+}
+```
+
+### Create a Reply
+
+```typescript
+import { createComment } from "~/lib/models/comments.server";
+
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData();
+  const replyText = formData.get("reply") as string;
+  const parentCommentId = formData.get("parentId") as string;
+  const workshopId = formData.get("workshopId") as string;
+
+  const result = await createComment(
+    request,
+    workshopId,
+    "Workshop",
+    replyText,
+    parentCommentId
+  );
+
+  if ("error" in result) {
+    return json({ error: result.error }, { status: 400 });
+  }
+
+  return json({ success: true });
+}
+```
+
+### Update a Comment
+
+```typescript
+import { updateComment } from "~/lib/models/comments.server";
+
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData();
+  const commentId = formData.get("commentId") as string;
+  const newText = formData.get("comment") as string;
+
+  const result = await updateComment(request, commentId, newText);
+
+  if ("error" in result) {
+    return json({ error: result.error }, { status: 400 });
+  }
+
+  return json({ success: true });
+}
+```
+
+### Delete a Comment
+
+```typescript
+import { deleteComment } from "~/lib/models/comments.server";
+
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData();
+  const commentId = formData.get("commentId") as string;
+
+  const result = await deleteComment(request, commentId);
+
+  if ("error" in result) {
+    return json({ error: result.error }, { status: 400 });
+  }
+
+  return json({ success: true });
+}
+```
+
+## Permission Rules
+
+- Users must be authenticated to create, update, or delete comments
+- Users can only edit or delete their own comments
+- Comments support Markdown formatting
+- Threaded replies are supported via the `replying_to` field
+
+## Related Features
+
+- [Community Features](/features/community) - User guide for community features
+- [Reactions](/api/models/reactions) - Reaction system for comments
+- [User](/api/models/user) - User model
+
+## File Location
+
+`app/lib/models/comments.server.ts`

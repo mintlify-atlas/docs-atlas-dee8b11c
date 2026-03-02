@@ -1,0 +1,120 @@
+{
+  "projectType": "saas",
+  "projectName": "Codante.io",
+  "projectDescription": "A Brazilian programming education platform offering interactive coding challenges, video workshops, learning tracks, and community features for developers.",
+  "theme": "mint",
+  "primaryColor": "#6366f1",
+  "lightColor": "#818cf8",
+  "darkColor": "#4f46e5",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart", "architecture"]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/challenges",
+              "features/workshops",
+              "features/tracks",
+              "features/community",
+              "features/certification"
+            ]
+          },
+          {
+            "group": "Development Guide",
+            "pages": [
+              "development/setup",
+              "development/routing",
+              "development/components",
+              "development/styling",
+              "development/authentication"
+            ]
+          },
+          {
+            "group": "Content Management",
+            "pages": [
+              "content/challenges",
+              "content/workshops",
+              "content/lessons",
+              "content/tracks"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Models",
+            "pages": [
+              "api/models/challenge",
+              "api/models/workshop",
+              "api/models/track",
+              "api/models/user",
+              "api/models/lesson",
+              "api/models/subscription"
+            ]
+          },
+          {
+            "group": "Services",
+            "pages": [
+              "api/services/authentication",
+              "api/services/axios",
+              "api/services/oauth"
+            ]
+          },
+          {
+            "group": "Components",
+            "pages": [
+              "api/components/ui",
+              "api/components/layouts",
+              "api/components/features"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Deployment",
+        "groups": [
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/overview",
+              "deployment/environment",
+              "deployment/production"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Interactive coding challenges (mini-projetos) with GitHub integration",
+    "Video workshops with lesson tracking and progress monitoring",
+    "Learning tracks (trilhas) combining workshops and challenges",
+    "User authentication with GitHub and Discord OAuth",
+    "Community features with comments, reactions, and Discord integration",
+    "Certificate generation for completed courses",
+    "Subscription management with Pro tier features",
+    "Video player with Vimeo integration and progress tracking",
+    "Real-time collaborative features and social sharing",
+    "Dashboard with user progress and statistics"
+  ],
+  "publicApiSurface": [
+    "Challenge - getChallenge(slug), getAllChallenges(), enrollChallenge()",
+    "Workshop - getWorkshop(slug), getAllWorkshops(), markLessonComplete()",
+    "Track - getTrack(slug), getAllTracks(), getTrackProgress()",
+    "User - getCurrentUser(), updateProfile(), getUserStats()",
+    "Lesson - getLesson(id), markWatched(), getProgress()",
+    "Subscription - getPlans(), subscribe(), cancelSubscription()",
+    "Authentication - login(), register(), logout(), requireAuth()",
+    "Comments - getComments(), addComment(), deleteComment()",
+    "Certificates - getCertificate(id), generateCertificate()",
+    "Dashboard - getDashboardData(), getUserProgress()"
+  ]
+}
